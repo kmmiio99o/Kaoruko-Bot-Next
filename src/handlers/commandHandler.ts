@@ -20,7 +20,6 @@ export class CommandHandler {
 
     for (const file of commandFiles) {
       try {
-        // Only load .js files, not .ts or .d.ts files
         if (!file.endsWith(".js")) continue;
 
         const commandModule = await import(file);
@@ -188,7 +187,7 @@ export class CommandHandler {
         {
           name: "error_type",
           description: "Type of error to test",
-          type: 3, // STRING
+          type: 3,
           required: false,
           choices: [
             { name: "General Error", value: "general" },
@@ -199,8 +198,7 @@ export class CommandHandler {
       ],
     });
 
-
-    // Add other slash commands (basic registration)
+    // Add other slash commands
     const otherCommands = Array.from(this.slashCommands.values())
       .filter(
         (cmd) =>

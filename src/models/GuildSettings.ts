@@ -12,7 +12,6 @@ const GuildSettingsSchema = new Schema({
   updatedAt: { type: Date, default: Date.now },
 });
 
-// Update the updatedAt field on save
 GuildSettingsSchema.pre("save", function (next) {
   this.updatedAt = new Date(Date.now());
   next();

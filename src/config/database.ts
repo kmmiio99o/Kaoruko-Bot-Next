@@ -3,9 +3,7 @@ import { Logger } from "../utils/logger";
 
 export class Database {
   static async connect() {
-    const uri =
-      process.env.MONGODB_URI ||
-      "mongodb+srv://kaoruko-bot-database:lefNRkCzDEbuw6vh@cluster0.kihe5zx.mongodb.net/kaoruko-bot?retryWrites=true&w=majority&appName=Cluster0";
+    const uri = process.env.MONGODB_URI || "";
 
     try {
       await mongoose.connect(uri);

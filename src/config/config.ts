@@ -24,7 +24,7 @@ export const config = {
         type: ActivityType.Listening,
       },
     ],
-    updateInterval: 30000, // 30 seconds
+    updateInterval: 30000,
   },
   colors: {
     success: "#00FF00",
@@ -36,6 +36,6 @@ export const config = {
   limits: {
     banLimit: 100,
     kickLimit: 100,
-    muteLimit: 30 * 24 * 60 * 60 * 1000, // 30 days
+    muteLimit: 30 * 24 * 60 * 60 * 1000,
   },
 };

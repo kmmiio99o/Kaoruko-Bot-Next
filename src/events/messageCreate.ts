@@ -8,7 +8,5 @@ export default {
 
     // Ignore DMs
     if (!message.guild) return;
-
-    // Message processing can be added here in the future
   },
 };

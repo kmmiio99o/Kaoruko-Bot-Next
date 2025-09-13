@@ -14,7 +14,7 @@ export interface IPoll extends Document {
   anonymous: boolean;
   createdAt: Date;
   endsAt: Date | null;
-  votes: Record<string, string>; // userId -> selectedOption
+  votes: Record<string, string>;
 }
 
 const PollSchema = new Schema({

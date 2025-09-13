@@ -130,7 +130,6 @@ async function updateStatus(client: Client) {
       },
     ];
 
-    // Randomly select one of the status options
     const randomStatus =
       statusOptions[Math.floor(Math.random() * statusOptions.length)];
 
@@ -140,10 +139,6 @@ async function updateStatus(client: Client) {
     };
 
     client.user.setPresence(presenceData);
-
-    Logger.info(
-      `Status updated: ${randomStatus.name} | Status: idle | ${guildCount} servers | ${totalMemberCount.toLocaleString()} users | Uptime: ${uptime}`,
-    );
   } catch (error: any) {
     Logger.error(`Failed to update status: ${error.message}`);
   }
@@ -190,7 +185,7 @@ client.on("interactionCreate", async (interaction: any) => {
             embeds: [
               Embeds.error("Command Not Found", "This command does not exist."),
             ],
-            flags: [64], // EPHEMERAL flag
+            flags: [64],
           });
         }
 
@@ -222,7 +217,7 @@ client.on("interactionCreate", async (interaction: any) => {
                   "Only the bot owner can use this command.",
                 ),
               ],
-              flags: [64], // EPHEMERAL flag
+              flags: [64],
             });
           }
 
@@ -282,7 +277,7 @@ client.on("interactionCreate", async (interaction: any) => {
                 "An error occurred while executing this command.",
               ),
             ],
-            flags: [64], // EPHEMERAL flag
+            flags: [64],
           });
         } catch (replyError) {
           Logger.error(`Failed to send error reply: ${replyError}`);
@@ -312,7 +307,7 @@ client.on("interactionCreate", async (interaction: any) => {
         .filter((choice: string) =>
           choice.toLowerCase().includes(focusedValue.toLowerCase()),
         )
-        .slice(0, 25); // Discord limit is 25 choices
+        .slice(0, 25);
 
       try {
         await interaction.respond(
@@ -323,8 +318,6 @@ client.on("interactionCreate", async (interaction: any) => {
       }
     }
   }
-
-  // Note: Poll button handling has been removed as requested
 });
 
 client.on("messageCreate", async (message) => {
@@ -356,7 +349,6 @@ client.on("messageCreate", async (message) => {
     return;
   }
 
-  // Check if command supports prefix commands
   if (command.slashCommand === true && command.prefixCommand !== true) {
     try {
       await message.reply({

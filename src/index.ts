@@ -5,7 +5,7 @@ import {
   ButtonBuilder,
   ButtonStyle,
   ActivityType,
-  PresenceStatusData, // Add this import
+  PresenceData,
 } from "discord.js";
 import { config } from "./config/config";
 import { CommandHandler } from "./handlers/commandHandler";
@@ -101,58 +101,55 @@ client.once("ready", async () => {
 
 // Status update functions
 async function updateStatus(client: Client) {
-  if (!client.user) return;
+  if (!client.user) {
+    Logger.warn("Client user is not available. Cannot update status.");
+    return;
+  }
 
   try {
     const guildCount = client.guilds.cache.size;
-    const memberCount = await getMemberCount(client);
+    const totalMemberCount = await getTotalMemberCount(client);
     const uptime = getUptime();
 
-    // Define status messages
-    const statusOptions = [
+    const statusOptions: Array<{ name: string; type: ActivityType }> = [
       {
         name: `${guildCount} servers`,
         type: ActivityType.Watching,
-        status: "online" as PresenceStatusData,
       },
       {
-        name: `${memberCount.toLocaleString()} users`,
+        name: `${totalMemberCount.toLocaleString()} users`,
         type: ActivityType.Watching,
-        status: "online" as PresenceStatusData,
       },
       {
         name: `for commands | /help`,
         type: ActivityType.Listening,
-        status: "idle" as PresenceStatusData, // Set to idle for this status
       },
       {
         name: `Uptime: ${uptime}`,
         type: ActivityType.Competing,
-        status: "online" as PresenceStatusData,
       },
     ];
 
-    // Select a random status from the options
+    // Randomly select one of the status options
     const randomStatus =
       statusOptions[Math.floor(Math.random() * statusOptions.length)];
 
-    // Set both the activity and status
-    client.user.setActivity(randomStatus.name, {
-      type: randomStatus.type,
-    });
+    const presenceData: PresenceData = {
+      activities: [{ name: randomStatus.name, type: randomStatus.type }],
+      status: "idle",
+    };
 
-    // Set the status (online, idle, dnd, invisible)
-    client.user.setStatus(randomStatus.status);
+    client.user.setPresence(presenceData);
 
     Logger.info(
-      `Status updated: ${randomStatus.name} | Status: ${randomStatus.status} | ${guildCount} servers | ${memberCount.toLocaleString()} users | Uptime: ${uptime}`,
+      `Status updated: ${randomStatus.name} | Status: idle | ${guildCount} servers | ${totalMemberCount.toLocaleString()} users | Uptime: ${uptime}`,
     );
   } catch (error: any) {
     Logger.error(`Failed to update status: ${error.message}`);
   }
 }
 
-async function getMemberCount(client: Client): Promise<number> {
+async function getTotalMemberCount(client: Client): Promise<number> {
   let totalMemberCount = 0;
 
   // Use the cached member counts from each guild

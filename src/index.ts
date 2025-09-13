@@ -4,6 +4,8 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  ActivityType,
+  PresenceStatusData, // Add this import
 } from "discord.js";
 import { config } from "./config/config";
 import { CommandHandler } from "./handlers/commandHandler";
@@ -27,6 +29,10 @@ const client = new Client({
 
 const commandHandler = new CommandHandler();
 const eventHandler = new EventHandler();
+
+// Status system variables
+let startTime: number | null = null;
+let statusInterval: NodeJS.Timeout | null = null;
 
 (client as any).commandHandler = commandHandler;
 
@@ -53,7 +59,9 @@ process.on("uncaughtException", (error) => {
   process.exit(1);
 });
 
-client.once("clientReady", async () => {
+client.once("ready", async () => {
+  // Set start time for uptime calculation
+  startTime = Date.now();
   Logger.success(`Bot is ready! Logged in as ${client.user?.tag}`);
 
   try {
@@ -73,8 +81,12 @@ client.once("clientReady", async () => {
 
     await commandHandler.loadCommands(config.clientId, config.token);
     await eventHandler.loadEvents(client);
-    Logger.success("Bot initialized successfully!");
 
+    // Start status rotation
+    updateStatus(client);
+    statusInterval = setInterval(() => updateStatus(client), 15000);
+
+    Logger.success("Bot initialized successfully!");
   } catch (error) {
     Logger.error(`Failed to initialize bot: ${error}`);
     WebhookLogger.logError(
@@ -86,6 +98,86 @@ client.once("clientReady", async () => {
     );
   }
 });
+
+// Status update functions
+async function updateStatus(client: Client) {
+  if (!client.user) return;
+
+  try {
+    const guildCount = client.guilds.cache.size;
+    const memberCount = await getMemberCount(client);
+    const uptime = getUptime();
+
+    // Define status messages
+    const statusOptions = [
+      {
+        name: `${guildCount} servers`,
+        type: ActivityType.Watching,
+        status: "online" as PresenceStatusData,
+      },
+      {
+        name: `${memberCount.toLocaleString()} users`,
+        type: ActivityType.Watching,
+        status: "online" as PresenceStatusData,
+      },
+      {
+        name: `for commands | /help`,
+        type: ActivityType.Listening,
+        status: "idle" as PresenceStatusData, // Set to idle for this status
+      },
+      {
+        name: `Uptime: ${uptime}`,
+        type: ActivityType.Competing,
+        status: "online" as PresenceStatusData,
+      },
+    ];
+
+    // Select a random status from the options
+    const randomStatus =
+      statusOptions[Math.floor(Math.random() * statusOptions.length)];
+
+    // Set both the activity and status
+    client.user.setActivity(randomStatus.name, {
+      type: randomStatus.type,
+    });
+
+    // Set the status (online, idle, dnd, invisible)
+    client.user.setStatus(randomStatus.status);
+
+    Logger.info(
+      `Status updated: ${randomStatus.name} | Status: ${randomStatus.status} | ${guildCount} servers | ${memberCount.toLocaleString()} users | Uptime: ${uptime}`,
+    );
+  } catch (error: any) {
+    Logger.error(`Failed to update status: ${error.message}`);
+  }
+}
+
+async function getMemberCount(client: Client): Promise<number> {
+  let totalMemberCount = 0;
+
+  // Use the cached member counts from each guild
+  client.guilds.cache.forEach((guild) => {
+    totalMemberCount += guild.memberCount || guild.members.cache.size;
+  });
+
+  return totalMemberCount;
+}
+
+function getUptime(): string {
+  if (startTime === null) {
+    return "Uptime N/A";
+  }
+
+  const uptimeMs = Date.now() - startTime;
+  const days = Math.floor(uptimeMs / (1000 * 60 * 60 * 24));
+  const hours = Math.floor(
+    (uptimeMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
+  );
+  const minutes = Math.floor((uptimeMs % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((uptimeMs % (1000 * 60)) / 1000);
+
+  return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+}
 
 client.on("interactionCreate", async (interaction: any) => {
   // Handle slash commands
@@ -235,159 +327,7 @@ client.on("interactionCreate", async (interaction: any) => {
     }
   }
 
-  // Handle button interactions (for polls)
-  else if (interaction.isButton()) {
-    if (interaction.customId.startsWith("poll_")) {
-      const polls = (client as any).polls;
-      if (!polls) {
-        try {
-          if (
-            interaction.isRepliable() &&
-            !interaction.replied &&
-            !interaction.deferred
-          ) {
-            await interaction.reply({
-              embeds: [Embeds.error("Poll Error", "No active polls found.")],
-              flags: [64], // EPHEMERAL flag
-            });
-          }
-        } catch (error) {
-          Logger.error(`Failed to send poll error reply: ${error}`);
-        }
-        return;
-      }
-
-      const parts = interaction.customId.split("_");
-      if (parts.length !== 3) {
-        try {
-          if (
-            interaction.isRepliable() &&
-            !interaction.replied &&
-            !interaction.deferred
-          ) {
-            await interaction.reply({
-              embeds: [
-                Embeds.error("Invalid Poll", "This poll button is invalid."),
-              ],
-              flags: [64], // EPHEMERAL flag
-            });
-          }
-        } catch (error) {
-          Logger.error(`Failed to send invalid poll reply: ${error}`);
-        }
-        return;
-      }
-
-      const pollId = interaction.message.id;
-      const selectedOption = parts[2];
-
-      const pollData = polls.get(pollId);
-      if (!pollData) {
-        try {
-          if (
-            interaction.isRepliable() &&
-            !interaction.replied &&
-            !interaction.deferred
-          ) {
-            await interaction.reply({
-              embeds: [
-                Embeds.error(
-                  "Poll Expired",
-                  "This poll has ended or is no longer active.",
-                ),
-              ],
-              flags: [64], // EPHEMERAL flag
-            });
-          }
-        } catch (error) {
-          Logger.error(`Failed to send poll expired reply: ${error}`);
-        }
-        return;
-      }
-
-      // Initialize votes object if it doesn't exist
-      if (!pollData.votes || typeof pollData.votes !== "object") {
-        pollData.votes = {};
-      }
-
-      // Initialize voters set if it doesn't exist
-      if (!pollData.voters || !(pollData.voters instanceof Set)) {
-        pollData.voters = new Set<string>();
-      }
-
-      // Check if user already voted - More explicit checking
-      let hasVoted = false;
-      if (pollData.votes && typeof pollData.votes === "object") {
-        hasVoted = pollData.votes[interaction.user.id] !== undefined;
-      }
-
-      if (hasVoted) {
-        try {
-          if (
-            interaction.isRepliable() &&
-            !interaction.replied &&
-            !interaction.deferred
-          ) {
-            await interaction.reply({
-              embeds: [
-                Embeds.error(
-                  "Already Voted",
-                  "You have already voted in this poll.",
-                ),
-              ],
-              flags: [64], // EPHEMERAL flag
-            });
-          }
-        } catch (error) {
-          Logger.error(`Failed to send already voted reply: ${error}`);
-        }
-        return;
-      }
-
-      // Record the vote
-      pollData.votes[interaction.user.id] = selectedOption;
-      pollData.voters.add(interaction.user.id);
-
-      Logger.logWithContext(
-        "POLL",
-        `User ${interaction.user.tag} voted for option ${selectedOption} in poll ${pollId}`,
-        "info",
-      );
-
-      // Confirm vote
-      const option = pollData.options.find(
-        (opt: any) => opt.letter === selectedOption,
-      );
-      try {
-        if (
-          interaction.isRepliable() &&
-          !interaction.replied &&
-          !interaction.deferred
-        ) {
-          if (option) {
-            await interaction.reply({
-              embeds: [
-                Embeds.success(
-                  "Vote Recorded",
-                  `You voted for: **${option.text}**`,
-                ),
-              ],
-              flags: [64], // EPHEMERAL flag
-            });
-          } else {
-            await interaction.reply({
-              embeds: [
-                Embeds.success("Vote Recorded", `Your vote has been recorded.`),
-              ],
-              flags: [64], // EPHEMERAL flag
-            });
-          }
-        }
-      } catch (error) {
-        Logger.error(`Failed to send vote confirmation: ${error}`);
-      }
-    }
-  }
+  // Note: Poll button handling has been removed as requested
 });
 
 client.on("messageCreate", async (message) => {
@@ -516,10 +456,15 @@ client.on("messageCreate", async (message) => {
   }
 });
 
-
 // Handle process exit
 process.on("SIGINT", async () => {
   Logger.info("Shutting down bot...");
+
+  // Clear the status interval
+  if (statusInterval) {
+    clearInterval(statusInterval);
+  }
+
   try {
     await Database.disconnect();
     process.exit(0);

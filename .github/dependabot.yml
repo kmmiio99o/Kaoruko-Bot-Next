@@ -1,0 +1,13 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "00:00"
+    open-pull-requests-limit: 30
+    cooldown:
+      default-days: 1
+      semver-major-days: 1
+    allow:
+      - dependency-type: "all"

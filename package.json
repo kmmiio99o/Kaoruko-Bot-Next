@@ -1,0 +1,25 @@
+{
+  "name": "kaoruko-bot-Next",
+  "version": "1.0",
+  "description": "Kaoruko is a Discord bot with many commands",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "start": "node dist/index.js",
+    "dev": "node scripts/dev.js",
+    "watch": "tsc -w"
+  },
+  "dependencies": {
+    "axios": "^1.12.1",
+    "child_process": "^1.0.2",
+    "discord.js": "^14.14.1",
+    "dotenv": "^17.2.2",
+    "mongodb": "^6.19.0",
+    "mongoose": "^8.18.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.1",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.3.2"
+  }
+}

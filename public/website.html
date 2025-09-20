@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kaoruko Bot - Advanced Discord Bot</title>
+    <link rel="stylesheet" href="website-styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <img src="https://cdn.discordapp.com/avatars/1398003581512056854/a_940a43c9f073d76847788a8982f08c25.gif?size=1024&animated=true" 
+                     alt="Kaoruko Bot" class="bot-avatar">
+                <span class="bot-name">Kaoruko Bot</span>
+            </div>
+            <div class="nav-menu" id="navMenu">
+                <a href="#home" class="nav-link active">Home</a>
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#commands" class="nav-link">Commands</a>
+                <a href="#dashboard" class="nav-link">Dashboard</a>
+                <a href="#status" class="nav-link">Status</a>
+                <a href="#support" class="nav-link">Support</a>
+            </div>
+            <div class="nav-toggle" id="navToggle">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="hero-container">
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    Advanced Discord Bot
+                    <span class="gradient-text">Kaoruko</span>
+                </h1>
+                <p class="hero-description">
+                    Powerful, feature-rich Discord bot with moderation tools, fun commands, 
+                    and comprehensive server management. Built with modern technology and 
+                    designed for scalability.
+                </p>
+                <div class="hero-buttons">
+                    <a href="#dashboard" class="btn btn-primary">
+                        <i class="material-icons">dashboard</i>
+                        Open Dashboard
+                    </a>
+                    <a href="#commands" class="btn btn-secondary">
+                        <i class="material-icons">terminal</i>
+                        View Commands
+                    </a>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat-item">
+                        <div class="stat-number" id="guildCount">-</div>
+                        <div class="stat-label">Servers</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="memberCount">-</div>
+                        <div class="stat-label">Users</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="uptime">-</div>
+                        <div class="stat-label">Uptime</div>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="bot-showcase">
+                    <img src="https://cdn.discordapp.com/avatars/1398003581512056854/a_940a43c9f073d76847788a8982f08c25.gif?size=1024&animated=true" 
+                         alt="Kaoruko Bot" class="bot-image">
+                    <div class="status-indicator">
+                        <div class="status-dot" id="statusDot"></div>
+                        <span id="statusText">Connecting...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Powerful Features</h2>
+                <p class="section-description">
+                    Everything you need to manage your Discord server effectively
+                </p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="material-icons">security</i>
+                    </div>
+                    <h3 class="feature-title">Moderation Tools</h3>
+                    <p class="feature-description">
+                        Advanced moderation commands including ban, kick, timeout, 
+                        and automated content filtering to keep your server safe.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="material-icons">dashboard</i>
+                    </div>
+                    <h3 class="feature-title">Web Dashboard</h3>
+                    <p class="feature-description">
+                        Beautiful web interface to manage your server settings, 
+                        view statistics, and configure bot features in real-time.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="material-icons">poll</i>
+                    </div>
+                    <h3 class="feature-title">Poll System</h3>
+                    <p class="feature-description">
+                        Create interactive polls with multiple options, 
+                        time limits, and real-time vote tracking.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="material-icons">analytics</i>
+                    </div>
+                    <h3 class="feature-title">Analytics</h3>
+                    <p class="feature-description">
+                        Comprehensive server analytics and user activity tracking 
+                        to help you understand your community better.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="material-icons">settings</i>
+                    </div>
+                    <h3 class="feature-title">Customizable</h3>
+                    <p class="feature-description">
+                        Highly customizable settings for each server with 
+                        per-guild configuration and role-based permissions.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="material-icons">speed</i>
+                    </div>
+                    <h3 class="feature-title">High Performance</h3>
+                    <p class="feature-description">
+                        Built with modern technology for optimal performance, 
+                        low latency, and 99.9% uptime reliability.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Commands Section -->
+    <section id="commands" class="commands">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Command Categories</h2>
+                <p class="section-description">
+                    Organized commands for every need
+                </p>
+            </div>
+            <div class="commands-filter">
+                <button class="filter-btn active" data-category="all">All</button>
+                <button class="filter-btn" data-category="admin">Admin</button>
+                <button class="filter-btn" data-category="moderation">Moderation</button>
+                <button class="filter-btn" data-category="utility">Utility</button>
+                <button class="filter-btn" data-category="fun">Fun</button>
+                <button class="filter-btn" data-category="info">Info</button>
+            </div>
+            <div class="commands-grid" id="commandsGrid">
+                <div class="loading-state">
+                    <div class="loading-spinner"></div>
+                    <p>Loading commands...</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Dashboard Section -->
+    <section id="dashboard" class="dashboard">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Server Dashboard</h2>
+                <p class="section-description">
+                    Manage your server settings and monitor bot activity
+                </p>
+            </div>
+            <div class="dashboard-preview">
+                <div class="dashboard-card">
+                    <div class="dashboard-header">
+                        <h3>Server Management</h3>
+                        <span class="badge online">Online</span>
+                    </div>
+                    <div class="dashboard-content">
+                        <div class="dashboard-stats">
+                            <div class="stat">
+                                <div class="stat-value" id="dashboardGuilds">-</div>
+                                <div class="stat-label">Servers</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value" id="dashboardUsers">-</div>
+                                <div class="stat-label">Users</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value" id="dashboardUptime">-</div>
+                                <div class="stat-label">Uptime</div>
+                            </div>
+                        </div>
+                        <div class="dashboard-features">
+                            <div class="feature-item">
+                                <i class="material-icons">dns</i>
+                                <span>Server Settings</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="material-icons">analytics</i>
+                                <span>Analytics</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="material-icons">list_alt</i>
+                                <span>Logs</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="material-icons">settings</i>
+                                <span>Configuration</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="dashboard-footer">
+                        <a href="/" class="btn btn-primary">
+                            <i class="material-icons">open_in_new</i>
+                            Open Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Status Section -->
+    <section id="status" class="status">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">System Status</h2>
+                <p class="section-description">
+                    Real-time monitoring of bot and system health
+                </p>
+            </div>
+            <div class="status-grid">
+                <div class="status-card">
+                    <div class="status-header">
+                        <h3>Bot Status</h3>
+                        <div class="status-badge" id="botStatusBadge">Checking...</div>
+                    </div>
+                    <div class="status-details">
+                        <div class="status-item">
+                            <span>Status:</span>
+                            <span id="botStatus">-</span>
+                        </div>
+                        <div class="status-item">
+                            <span>Ping:</span>
+                            <span id="botPing">-</span>
+                        </div>
+                        <div class="status-item">
+                            <span>Uptime:</span>
+                            <span id="botUptime">-</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="status-card">
+                    <div class="status-header">
+                        <h3>Database</h3>
+                        <div class="status-badge" id="dbStatusBadge">Checking...</div>
+                    </div>
+                    <div class="status-details">
+                        <div class="status-item">
+                            <span>Status:</span>
+                            <span id="dbStatus">-</span>
+                        </div>
+                        <div class="status-item">
+                            <span>Last Sync:</span>
+                            <span id="dbLastSync">-</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="status-card">
+                    <div class="status-header">
+                        <h3>System</h3>
+                        <div class="status-badge online">Online</div>
+                    </div>
+                    <div class="status-details">
+                        <div class="status-item">
+                            <span>Memory:</span>
+                            <span id="systemMemory">-</span>
+                        </div>
+                        <div class="status-item">
+                            <span>Node.js:</span>
+                            <span id="nodeVersion">-</span>
+                        </div>
+                        <div class="status-item">
+                            <span>Platform:</span>
+                            <span id="platform">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Support Section -->
+    <section id="support" class="support">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Get Support</h2>
+                <p class="section-description">
+                    Need help? We're here to assist you
+                </p>
+            </div>
+            <div class="support-grid">
+                <div class="support-card">
+                    <div class="support-icon">
+                        <i class="material-icons">discord</i>
+                    </div>
+                    <h3>Discord Server</h3>
+                    <p>Join our Discord server for community support and updates</p>
+                    <a href="#" class="btn btn-outline">Join Discord</a>
+                </div>
+                <div class="support-card">
+                    <div class="support-icon">
+                        <i class="material-icons">description</i>
+                    </div>
+                    <h3>Documentation</h3>
+                    <p>Comprehensive guides and API documentation</p>
+                    <a href="#" class="btn btn-outline">View Docs</a>
+                </div>
+                <div class="support-card">
+                    <div class="support-icon">
+                        <i class="material-icons">bug_report</i>
+                    </div>
+                    <h3>Report Issues</h3>
+                    <p>Found a bug? Report it on our GitHub repository</p>
+                    <a href="#" class="btn btn-outline">Report Bug</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <div class="footer-logo">
+                        <img src="https://cdn.discordapp.com/avatars/1398003581512056854/a_940a43c9f073d76847788a8982f08c25.gif?size=1024&animated=true" 
+                             alt="Kaoruko Bot" class="footer-avatar">
+                        <span>Kaoruko Bot</span>
+                    </div>
+                    <p class="footer-description">
+                        Advanced Discord bot with powerful features and modern web interface.
+                    </p>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="#home">Home</a></li>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#commands">Commands</a></li>
+                        <li><a href="#dashboard">Dashboard</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Support</h4>
+                    <ul>
+                        <li><a href="#status">Status</a></li>
+                        <li><a href="#support">Support</a></li>
+                        <li><a href="#">Documentation</a></li>
+                        <li><a href="#">GitHub</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="#">Terms of Service</a></li>
+                        <li><a href="#">Cookie Policy</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Kaoruko Bot. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="website-script.js"></script>
+</body>
+</html>

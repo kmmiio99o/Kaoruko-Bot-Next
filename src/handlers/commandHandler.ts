@@ -239,4 +239,8 @@ export class CommandHandler {
   getAllCommandNames(): string[] {
     return Array.from(this.commands.keys());
   }
+
+  getAllCommands(): Command[] {
+    return Array.from(this.commands.values());
+  }
 }

@@ -63,4 +63,15 @@ export class DatabaseService {
       throw error;
     }
   }
+
+  // Get all guild settings (for dashboard)
+  static async getAllGuildSettings(): Promise<IGuildSettings[]> {
+    try {
+      const settings = await GuildSettings.find({});
+      return settings;
+    } catch (error) {
+      Logger.error(`Error getting all guild settings: ${error}`);
+      throw error;
+    }
+  }
 }

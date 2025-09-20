@@ -12,6 +12,9 @@ console.log(
   "\x1b[36m║                      Advanced Discord Bot Framework - TypeScript Edition                         ║",
 );
 console.log(
+  "\x1b[36m║                              🌐 Built-in Web Dashboard Included 🌐                              ║",
+);
+console.log(
   "\x1b[36m╚══════════════════════════════════════════════════════════════════════════════════════════════════╝\x1b[0m",
 );
 console.log("");
@@ -204,11 +207,17 @@ compile.on("close", (code) => {
       "\x1b[32m║                                    START COMPLETED SUCCESSFULLY                                      ║",
     );
     console.log(
+      "\x1b[32m║                              🌐 Dashboard: http://localhost:3000 🌐                              ║",
+    );
+    console.log(
       "\x1b[32m╚══════════════════════════════════════════════════════════════════════════════════════════════════════╝\x1b[0m",
     );
 
     // Start the bot
     log("🚀 Starting bot in development mode...", "info");
+    log("🌐 Web dashboard will be available at http://localhost:3000", "info");
+    log("📊 Dashboard features: Real-time stats, server management, logs, settings", "debug");
+    log("🔐 Dashboard uses basic auth token (check .env DASHBOARD_TOKEN)", "debug");
     log("🔄 Auto-restart enabled", "debug");
     log("⌨️  Press Ctrl+C to stop", "debug");
     console.log("");
@@ -229,6 +238,10 @@ compile.on("close", (code) => {
         console.log("\x1b[33m" + output.trim() + "\x1b[0m");
       } else if (output.includes("[INFO]")) {
         console.log("\x1b[36m" + output.trim() + "\x1b[0m");
+      } else if (output.includes("Dashboard dostępny")) {
+        console.log("\x1b[35m🌐 " + output.trim() + "\x1b[0m");
+      } else if (output.includes("Serwer webowy")) {
+        console.log("\x1b[35m🌐 " + output.trim() + "\x1b[0m");
       } else {
         console.log("\x1b[37m" + output.trim() + "\x1b[0m");
       }
@@ -303,6 +316,9 @@ compile.on("close", (code) => {
     );
     console.log(
       "\x1b[31m║                                           BUILD FAILED                                             ║",
+    );
+    console.log(
+      "\x1b[31m║                              🌐 Dashboard will not be available 🌐                              ║",
     );
     console.log(
       "\x1b[31m╚══════════════════════════════════════════════════════════════════════════════════════════════════════╝\x1b[0m",

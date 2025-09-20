@@ -9,6 +9,7 @@ export const config = {
   guildId: process.env.GUILD_ID || "",
   ownerId: process.env.OWNER_ID || "",
   prefix: process.env.PREFIX || ".",
+  webPort: parseInt(process.env.WEB_PORT || "3000"),
   status: {
     activities: [
       {

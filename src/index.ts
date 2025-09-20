@@ -15,6 +15,7 @@ import { Embeds } from "./utils/embeds";
 import { WebhookLogger } from "./utils/webhooklogger";
 import { Database } from "./config/database";
 import { DatabaseService } from "./services/DatabaseService";
+import { WebServer } from "./services/WebServer";
 
 const client = new Client({
   intents: [
@@ -29,6 +30,7 @@ const client = new Client({
 
 const commandHandler = new CommandHandler();
 const eventHandler = new EventHandler();
+const webServer = new WebServer(client, commandHandler, config.webPort);
 
 // Status system variables
 let startTime: number | null = null;
@@ -65,7 +67,17 @@ client.once("ready", async () => {
   Logger.success(`Bot is ready! Logged in as ${client.user?.tag}`);
 
   try {
-    await Database.connect();
+    // Start web server first (independent of database)
+    await webServer.start();
+
+    // Try to connect to database (optional for web server)
+    try {
+      await Database.connect();
+      Logger.success("Connected to database successfully!");
+    } catch (dbError) {
+      Logger.warn(`Database connection failed: ${dbError}`);
+      Logger.info("Bot will continue without database connection");
+    }
 
     const guildCount = client.guilds.cache.size;
     let userCount = 0;
@@ -73,11 +85,15 @@ client.once("ready", async () => {
       userCount += guild.memberCount || 0;
     });
 
-    WebhookLogger.logStartup(
-      client.user?.tag || "Unknown Bot",
-      guildCount,
-      userCount,
-    );
+    try {
+      WebhookLogger.logStartup(
+        client.user?.tag || "Unknown Bot",
+        guildCount,
+        userCount,
+      );
+    } catch (webhookError) {
+      Logger.warn(`Webhook logging failed: ${webhookError}`);
+    }
 
     await commandHandler.loadCommands(config.clientId, config.token);
     await eventHandler.loadEvents(client);
@@ -89,13 +105,17 @@ client.once("ready", async () => {
     Logger.success("Bot initialized successfully!");
   } catch (error) {
     Logger.error(`Failed to initialize bot: ${error}`);
-    WebhookLogger.logError(
-      "BotInitialization",
-      String(error),
-      null,
-      null,
-      null,
-    );
+    try {
+      WebhookLogger.logError(
+        "BotInitialization",
+        String(error),
+        null,
+        null,
+        null,
+      );
+    } catch (webhookError) {
+      Logger.warn(`Webhook logging failed: ${webhookError}`);
+    }
   }
 });
 
@@ -455,6 +475,7 @@ process.on("SIGINT", async () => {
   }
 
   try {
+    await webServer.stop();
     await Database.disconnect();
     process.exit(0);
   } catch (error) {

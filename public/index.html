@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="pl">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Kaoruko Bot - Dashboard</title>
+        <link rel="stylesheet" href="styles.css" />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap"
+            rel="stylesheet"
+        />
+        <link
+            href="https://fonts.googleapis.com/icon?family=Material+Icons"
+            rel="stylesheet"
+        />
+    </head>
+    <body>
+        <div class="app">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <div class="bot-avatar">
+                        <img
+                            src="https://cdn.discordapp.com/avatars/1398003581512056854/a_940a43c9f073d76847788a8982f08c25.gif?size=1024&animated=true"
+                            alt="Kaoruko Bot"
+                            class="avatar-image"
+                        />
+                    </div>
+                    <h1 class="bot-name">Kaoruko Bot</h1>
+                    <div class="status-indicator">
+                        <div class="status-dot" id="statusDot"></div>
+                        <span id="statusText">Łączenie...</span>
+                    </div>
+                </div>
+                <nav class="navigation">
+                    <div class="nav-item active" data-tab="overview">
+                        <i class="material-icons">dashboard</i>
+                        <span>Przegląd</span>
+                    </div>
+                    <div class="nav-item" data-tab="servers">
+                        <i class="material-icons">dns</i>
+                        <span>Serwery</span>
+                    </div>
+                    <div class="nav-item" data-tab="commands">
+                        <i class="material-icons">terminal</i>
+                        <span>Komendy</span>
+                    </div>
+                    <div class="nav-item" data-tab="logs">
+                        <i class="material-icons">list_alt</i>
+                        <span>Logi</span>
+                    </div>
+                    <div class="nav-item" data-tab="status">
+                        <i class="material-icons">monitor_heart</i>
+                        <span>Status</span>
+                    </div>
+                    <div class="nav-item" data-tab="settings">
+                        <i class="material-icons">settings</i>
+                        <span>Server Settings</span>
+                    </div>
+                </nav>
+                <div class="sidebar-footer">
+                    <button class="material-button" id="websiteBtn">
+                        <i class="material-icons">language</i>
+                        <span>Strona główna</span>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <div class="main-content-wrapper">
+                <header class="app-bar">
+                    <h2 class="page-title" id="pageTitle">Przegląd</h2>
+                    <div class="app-bar-actions">
+                        <button
+                            class="material-button"
+                            id="refreshBtn"
+                            title="Refresh"
+                        >
+                            <i class="material-icons">refresh</i>
+                        </button>
+                        <button
+                            class="material-button"
+                            id="settingsBtn"
+                            title="Settings"
+                        >
+                            <i class="material-icons">settings</i>
+                        </button>
+                    </div>
+                </header>
+                <main class="main-content">
+                    <!-- Overview Tab -->
+                    <div class="tab-content active" id="overview-tab">
+                        <div class="stats-grid card">
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="material-icons">dns</i>
+                                </div>
+                                <div class="stat-content">
+                                    <h3 id="guildCount">-</h3>
+                                    <p>Serwery</p>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="material-icons">people</i>
+                                </div>
+                                <div class="stat-content">
+                                    <h3 id="memberCount">-</h3>
+                                    <p>Użytkownicy</p>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="material-icons">schedule</i>
+                                </div>
+                                <div class="stat-content">
+                                    <h3 id="uptime">-</h3>
+                                    <p>Czas działania</p>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="material-icons">memory</i>
+                                </div>
+                                <div class="stat-content">
+                                    <h3 id="memoryUsage">-</h3>
+                                    <p>Pamięć (MB)</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Servers Tab -->
+                    <div class="tab-content" id="servers-tab">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Lista serwerów</h3>
+                            </div>
+                            <div class="table-container" id="serversList">
+                                <div class="loading-state">
+                                    <div class="loading-spinner"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Commands Tab -->
+                    <div class="tab-content" id="commands-tab">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Lista komend</h3>
+                            </div>
+                            <div class="table-container" id="commandsList">
+                                <div class="loading-state">
+                                    <div class="loading-spinner"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Logs Tab -->
+                    <div class="tab-content" id="logs-tab">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Logi</h3>
+                            </div>
+                            <div class="table-container" id="logsContainer">
+                                <div class="loading-state">
+                                    <div class="loading-spinner"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status Tab -->
+                    <div class="tab-content" id="status-tab">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Status systemu</h3>
+                            </div>
+                            <div id="status-container">
+                                <!-- Status content will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Settings Tab -->
+                    <div class="tab-content" id="settings-tab">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Server Settings</h3>
+                            </div>
+                            <select id="serverSelect"></select>
+                            <div id="settings-form" style="display: none">
+                                <!-- Settings form will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="script.js"></script>
+    </body>
+</html>

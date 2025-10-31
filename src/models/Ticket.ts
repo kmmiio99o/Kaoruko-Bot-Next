@@ -21,14 +21,14 @@ export enum TicketStatus {
   IN_PROGRESS = "in_progress",
   WAITING = "waiting",
   CLOSED = "closed",
-  ARCHIVED = "archived"
+  ARCHIVED = "archived",
 }
 
 export enum TicketPriority {
   LOW = "low",
   NORMAL = "normal",
   HIGH = "high",
-  URGENT = "urgent"
+  URGENT = "urgent",
 }
 
 export enum TicketCategory {
@@ -38,7 +38,7 @@ export enum TicketCategory {
   MODERATION = "moderation",
   PARTNERSHIP = "partnership",
   REPORT = "report",
-  OTHER = "other"
+  OTHER = "other",
 }
 
 export interface ITicket extends Document {
@@ -77,25 +77,31 @@ export interface ITicket extends Document {
   };
 }
 
-const TicketUserSchema = new Schema({
-  userId: { type: String, required: true },
-  username: { type: String, required: true },
-  discriminator: { type: String },
-  addedAt: { type: Date, default: Date.now }
-}, { _id: false });
+const TicketUserSchema = new Schema(
+  {
+    userId: { type: String, required: true },
+    username: { type: String, required: true },
+    discriminator: { type: String },
+    addedAt: { type: Date, default: Date.now },
+  },
+  { _id: false },
+);
 
-const TicketMessageSchema = new Schema({
-  messageId: { type: String, required: true },
-  authorId: { type: String, required: true },
-  authorName: { type: String, required: true },
-  content: { type: String, required: true },
-  attachments: { type: [String], default: [] },
-  timestamp: { type: Date, required: true }
-}, { _id: false });
+const TicketMessageSchema = new Schema(
+  {
+    messageId: { type: String, required: true },
+    authorId: { type: String, required: true },
+    authorName: { type: String, required: true },
+    content: { type: String, required: true },
+    attachments: { type: [String], default: [] },
+    timestamp: { type: Date, required: true },
+  },
+  { _id: false },
+);
 
 const TicketSchema = new Schema({
   guildId: { type: String, required: true },
-  ticketId: { type: String, required: true, unique: true },
+  ticketId: { type: String, required: true },
   channelId: { type: String, required: true },
   authorId: { type: String, required: true },
   authorName: { type: String, required: true },
@@ -103,17 +109,17 @@ const TicketSchema = new Schema({
   category: {
     type: String,
     enum: Object.values(TicketCategory),
-    default: TicketCategory.GENERAL
+    default: TicketCategory.GENERAL,
   },
   priority: {
     type: String,
     enum: Object.values(TicketPriority),
-    default: TicketPriority.NORMAL
+    default: TicketPriority.NORMAL,
   },
   status: {
     type: String,
     enum: Object.values(TicketStatus),
-    default: TicketStatus.OPEN
+    default: TicketStatus.OPEN,
   },
   description: { type: String, maxlength: 1000 },
   assignedTo: { type: String },
@@ -137,8 +143,8 @@ const TicketSchema = new Schema({
     escalatedBy: { type: String },
     escalatedAt: { type: Date },
     rating: { type: Number, min: 1, max: 5 },
-    feedback: { type: String, maxlength: 1000 }
-  }
+    feedback: { type: String, maxlength: 1000 },
+  },
 });
 
 // Indexes for better performance
@@ -158,14 +164,33 @@ TicketSchema.pre("save", function (next) {
   next();
 });
 
+// Define interface for static methods
+interface TicketModel extends mongoose.Model<ITicket> {
+  generateTicketId(guildId: string): string;
+  findByGuild(guildId: string): Promise<ITicket | null>;
+  findByGuildAndStatus(
+    guildId: string,
+    status?: TicketStatus,
+  ): Promise<ITicket[]>;
+  findByUser(guildId: string, userId: string): Promise<ITicket[]>;
+  getGuildStats(guildId: string): Promise<any[]>;
+}
+
 // Static methods
-TicketSchema.statics.generateTicketId = function(guildId: string): string {
+TicketSchema.statics.generateTicketId = function (guildId: string): string {
   const timestamp = Date.now().toString(36);
   const random = Math.random().toString(36).substr(2, 5);
   return `${guildId.substr(-4)}-${timestamp}-${random}`.toUpperCase();
 };
 
-TicketSchema.statics.findByGuildAndStatus = function(guildId: string, status?: TicketStatus) {
+TicketSchema.statics.findByGuild = function (guildId: string) {
+  return this.findOne({ guildId });
+};
+
+TicketSchema.statics.findByGuildAndStatus = function (
+  guildId: string,
+  status?: TicketStatus,
+) {
   const query: any = { guildId };
   if (status) {
     query.status = status;
@@ -173,64 +198,79 @@ TicketSchema.statics.findByGuildAndStatus = function(guildId: string, status?: T
   return this.find(query).sort({ createdAt: -1 });
 };
 
-TicketSchema.statics.findByUser = function(guildId: string, userId: string) {
+TicketSchema.statics.findByUser = function (guildId: string, userId: string) {
   return this.find({
     guildId,
     $or: [
       { authorId: userId },
       { assignedTo: userId },
-      { 'users.userId': userId }
-    ]
+      { "users.userId": userId },
+    ],
   }).sort({ createdAt: -1 });
 };
 
-TicketSchema.statics.getGuildStats = function(guildId: string) {
+TicketSchema.statics.getGuildStats = function (guildId: string) {
   return this.aggregate([
     { $match: { guildId } },
     {
       $group: {
-        _id: '$status',
+        _id: "$status",
         count: { $sum: 1 },
-        avgResponseTime: { $avg: { $subtract: ['$updatedAt', '$createdAt'] } }
-      }
-    }
+        avgResponseTime: { $avg: { $subtract: ["$updatedAt", "$createdAt"] } },
+      },
+    },
   ]);
 };
 
 // Instance methods
-TicketSchema.methods.addUser = function(userId: string, username: string, discriminator?: string) {
-  const existingUser = this.users.find((user: ITicketUser) => user.userId === userId);
+TicketSchema.methods.addUser = function (
+  userId: string,
+  username: string,
+  discriminator?: string,
+) {
+  const existingUser = this.users.find(
+    (user: ITicketUser) => user.userId === userId,
+  );
   if (!existingUser) {
     this.users.push({
       userId,
       username,
       discriminator,
-      addedAt: new Date()
+      addedAt: new Date(),
     });
     return this.save();
   }
   return Promise.resolve(this);
 };
 
-TicketSchema.methods.removeUser = function(userId: string) {
+TicketSchema.methods.removeUser = function (userId: string) {
   this.users = this.users.filter((user: ITicketUser) => user.userId !== userId);
   return this.save();
 };
 
-TicketSchema.methods.addMessage = function(messageId: string, authorId: string, authorName: string, content: string, attachments: string[] = []) {
+TicketSchema.methods.addMessage = function (
+  messageId: string,
+  authorId: string,
+  authorName: string,
+  content: string,
+  attachments: string[] = [],
+) {
   this.messages.push({
     messageId,
     authorId,
     authorName,
     content,
     attachments,
-    timestamp: new Date()
+    timestamp: new Date(),
   });
   this.lastActivity = new Date();
   return this.save();
 };
 
-TicketSchema.methods.updateStatus = function(status: TicketStatus, userId?: string) {
+TicketSchema.methods.updateStatus = function (
+  status: TicketStatus,
+  userId?: string,
+) {
   this.status = status;
   this.lastActivity = new Date();
 
@@ -242,7 +282,7 @@ TicketSchema.methods.updateStatus = function(status: TicketStatus, userId?: stri
   return this.save();
 };
 
-TicketSchema.methods.assignTo = function(userId: string, assignedBy: string) {
+TicketSchema.methods.assignTo = function (userId: string, assignedBy: string) {
   this.assignedTo = userId;
   this.assignedBy = assignedBy;
   this.assignedAt = new Date();
@@ -250,7 +290,7 @@ TicketSchema.methods.assignTo = function(userId: string, assignedBy: string) {
   return this.save();
 };
 
-TicketSchema.methods.reopen = function() {
+TicketSchema.methods.reopen = function () {
   this.status = TicketStatus.OPEN;
   this.reopenCount += 1;
   this.closedBy = undefined;
@@ -260,4 +300,7 @@ TicketSchema.methods.reopen = function() {
   return this.save();
 };
 
-export default mongoose.model<ITicket>("Ticket", TicketSchema);
+export default mongoose.model<ITicket, TicketModel>(
+  "Ticket",
+  TicketSchema,
+) as TicketModel;

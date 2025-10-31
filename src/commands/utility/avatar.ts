@@ -1,16 +1,20 @@
-import { ChatInputCommandInteraction, Message, EmbedBuilder } from "discord.js";
-import { Command } from "../../types";
+import {
+  SlashCommandBuilder,
+  ChatInputCommandInteraction,
+  Message,
+  EmbedBuilder,
+  User,
+} from "discord.js";
+import { ICommand } from "../../types/Command";
 import { Embeds } from "../../utils/embeds";
-import { Logger } from "../../utils/logger";
-import axios from "axios";
 
-export default {
+export const command: ICommand = {
   name: "avatar",
   description: "Get a user's avatar",
   category: "utility",
   slashCommand: true,
   prefixCommand: true,
-  usage: "Slash: /avatar [user:<user>]\nPrefix: .avatar [@user | <user_id>]",
+  usage: "Slash: /avatar [user]\nPrefix: .avatar [@user]",
   examples: [
     "/avatar",
     "/avatar user:@user",
@@ -18,138 +22,146 @@ export default {
     ".avatar @user",
     ".avatar 123456789012345678",
   ],
+
+  data: new SlashCommandBuilder()
+    .setName("avatar")
+    .setDescription("Get a user's avatar")
+    .addUserOption((option) =>
+      option
+        .setName("user")
+        .setDescription("The user whose avatar you want to see")
+        .setRequired(false),
+    ),
+
   async run(
-    interaction: ChatInputCommandInteraction | undefined,
-    message: Message | undefined,
-    args: string[] | undefined,
+    interaction?: ChatInputCommandInteraction,
+    message?: Message,
+    args?: string[],
   ) {
     try {
       const isSlashCommand = !!interaction;
       const client = isSlashCommand ? interaction.client : message?.client;
       const executor = isSlashCommand ? interaction.user : message?.author;
-      let user = null;
+      let user: User | null = null;
 
-      if (!client || !executor) {
-        Logger.logWithContext(
-          "AVATAR",
-          "Missing client or executor context",
-          "error",
-        );
-        return;
-      }
+      if (!client || !executor) return;
 
-      if (isSlashCommand) {
+      if (isSlashCommand && interaction) {
+        // Get user from slash command option or default to command executor
         user = interaction.options.getUser("user") || interaction.user;
-      } else if (message && args) {
-        if (args[0]) {
-          const userId = args[0].replace(/[<@!>]/g, ""); // Remove mention characters
-          user = await client.users.fetch(userId).catch(() => null);
+      } else if (message) {
+        // Handle prefix command
+        if (args && args.length > 0) {
+          // Try to get user from mention, ID, or username
+          const userInput = args[0];
+
+          // Check if it's a mention
+          const mentionMatch = userInput.match(/^<@!?(\d+)>$/);
+          if (mentionMatch) {
+            try {
+              user = await client.users.fetch(mentionMatch[1]);
+            } catch {
+              user = null;
+            }
+          } else if (/^\d+$/.test(userInput)) {
+            // Check if it's a user ID
+            try {
+              user = await client.users.fetch(userInput);
+            } catch {
+              user = null;
+            }
+          } else {
+            // Try to find by username in the guild
+            if (message.guild) {
+              const member = message.guild.members.cache.find(
+                (m) =>
+                  m.user.username.toLowerCase() === userInput.toLowerCase() ||
+                  m.displayName.toLowerCase() === userInput.toLowerCase(),
+              );
+              user = member?.user || null;
+            }
+          }
+        } else {
+          // No arguments provided, use message author
+          user = message.author;
         }
-        user = user || message.author;
       }
 
       if (!user) {
-        Logger.logWithContext("AVATAR", `User not found for query`, "warn");
-        const embed = Embeds.error(
+        const errorEmbed = Embeds.error(
           "User Not Found",
-          "Could not find a user with that ID or mention.",
+          "Could not find the specified user. Please check the username, mention, or ID.",
         );
+
         if (isSlashCommand) {
-          return await interaction!.reply({ embeds: [embed], flags: [64] });
-        } else {
-          return await message!.reply({ embeds: [embed] });
+          await interaction!.reply({ embeds: [errorEmbed], ephemeral: true });
+        } else if (message) {
+          await message.reply({ embeds: [errorEmbed] });
         }
+        return;
       }
 
-      Logger.logWithContext(
-        "AVATAR",
-        `Getting avatar for user ${user.tag}`,
-        "info",
-      );
-
-      let avatarURL = user.displayAvatarURL({
-        size: 4096,
-        extension: "png",
-        forceStatic: false,
-      });
-
-      // Try UserPFP first
-      let descriptionText = ` `;
-      try {
-        const response = await axios.get(
-          "https://userpfp.github.io/UserPFP/source/data.json",
-        );
-        if (response.data.avatars[user.id]) {
-          avatarURL = response.data.avatars[user.id];
-          descriptionText = `Powered by [UserPFP](https://userpfp.github.io/UserPFP/)`;
-        }
-      } catch (error: any) {
-        Logger.logWithContext(
-          "AVATAR",
-          `[UserPFP] Fallback for ${user.id}: ${error.message}`,
-          "warn",
-        );
-      }
-
+      // Create avatar embed
       const embed = new EmbedBuilder()
-        .setColor("#2F3136")
-        .setTitle(`${user.tag}'s Avatar`)
-        .setDescription(descriptionText)
-        .setImage(avatarURL)
+        .setTitle(`${user.displayName || user.username}'s Avatar`)
+        .setColor("#5865F2")
+        .setImage(user.displayAvatarURL({ size: 512, extension: "png" }))
+        .setTimestamp()
         .addFields(
           {
-            name: "PNG",
-            value: `[Link](${user.displayAvatarURL({
-              extension: "png",
-              size: 4096,
-            })})`,
+            name: "Username",
+            value: `${user.username}#${user.discriminator}`,
             inline: true,
           },
           {
-            name: "JPG",
-            value: `[Link](${user.displayAvatarURL({
-              extension: "jpg",
-              size: 4096,
-            })})`,
+            name: "User ID",
+            value: user.id,
             inline: true,
           },
           {
-            name: "WEBP",
-            value: `[Link](${user.displayAvatarURL({
-              extension: "webp",
-              size: 4096,
-            })})`,
-            inline: true,
+            name: "Avatar Links",
+            value: [
+              `[PNG](${user.displayAvatarURL({ extension: "png", size: 512 })})`,
+              `[JPEG](${user.displayAvatarURL({ extension: "jpeg", size: 512 })})`,
+              `[WEBP](${user.displayAvatarURL({ extension: "webp", size: 512 })})`,
+            ].join(" • "),
+            inline: false,
           },
         )
-        .setTimestamp();
+        .setFooter({
+          text: `Requested by ${executor.username}`,
+          iconURL: executor.displayAvatarURL(),
+        });
+
+      // Check if user has a custom avatar (not default)
+      if (user.avatar) {
+        embed.setDescription("🖼️ Custom avatar");
+      } else {
+        embed.setDescription("🤖 Default Discord avatar");
+      }
 
       if (isSlashCommand) {
-        await interaction.reply({ embeds: [embed] });
+        await interaction!.reply({ embeds: [embed] });
       } else if (message) {
         await message.reply({ embeds: [embed] });
       }
-
-      Logger.logWithContext(
-        "AVATAR",
-        `Sent avatar embed for user ${user.tag}`,
-        "success",
-      );
     } catch (error) {
-      Logger.logWithContext(
-        "AVATAR",
-        `Error getting avatar: ${error}`,
-        "error",
+      console.error("Error in avatar command:", error);
+
+      const errorEmbed = Embeds.error(
+        "Command Error",
+        "An error occurred while fetching the avatar. Please try again.",
       );
-      const embed = Embeds.error(
-        "Avatar Error",
-        "An unexpected error occurred while fetching the avatar.",
-      );
-      if (interaction && !interaction.replied && !interaction.deferred) {
-        await interaction.reply({ embeds: [embed], flags: [64] });
+
+      if (interaction) {
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply({ embeds: [errorEmbed] });
+        } else {
+          await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        }
       } else if (message) {
-        await message.reply({ embeds: [embed] });
+        await message.reply({ embeds: [errorEmbed] });
       }
     }
   },
-} as Command;
+};

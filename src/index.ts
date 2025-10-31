@@ -63,7 +63,7 @@ process.on("uncaughtException", (error) => {
   process.exit(1);
 });
 
-client.once("ready", async () => {
+client.once("clientReady", async () => {
   // Set start time for uptime calculation
   startTime = Date.now();
   Logger.success(`Bot is ready! Logged in as ${client.user?.tag}`);
@@ -199,7 +199,20 @@ client.on("interactionCreate", async (interaction: any) => {
     try {
       await ticketHandler.handleTicketInteraction(interaction);
     } catch (error) {
-      Logger.error("Error handling ticket button interaction:", error);
+      Logger.error("Error handling ticket button interaction:" + ": " + error);
+    }
+    return;
+  }
+
+  // Handle string select menu for ticket categories
+  if (
+    interaction.isStringSelectMenu() &&
+    interaction.customId === "ticket_category_select"
+  ) {
+    try {
+      await ticketHandler.handleCategorySelect(interaction);
+    } catch (error) {
+      Logger.error("Error handling ticket category selection:" + ": " + error);
     }
     return;
   }
@@ -213,7 +226,7 @@ client.on("interactionCreate", async (interaction: any) => {
     try {
       await ticketHandler.handleModalSubmit(interaction);
     } catch (error) {
-      Logger.error("Error handling ticket modal submission:", error);
+      Logger.error("Error handling ticket modal submission:" + ": " + error);
     }
     return;
   }

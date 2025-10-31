@@ -494,7 +494,7 @@ export class WebServer {
     return `${days}d ${hours}h ${minutes}m ${secs}s`;
   }
 
-  public async start(): Promise<void> {
+  public async start() {
     if (this.isRunning) {
       Logger.warn("Serwer webowy już działa");
       return;
@@ -514,7 +514,7 @@ export class WebServer {
     }
   }
 
-  public async stop(): Promise<void> {
+  public async stop() {
     if (!this.isRunning) {
       Logger.warn("Serwer webowy nie działa");
       return;

@@ -1,73 +1,134 @@
 import {
+  SlashCommandBuilder,
   ChatInputCommandInteraction,
-  PermissionFlagsBits,
   Message,
+  EmbedBuilder,
+  PermissionFlagsBits,
 } from "discord.js";
-import { Command } from "../../types";
+import { ICommand } from "../../types/Command";
 import { Embeds } from "../../utils/embeds";
 
-export default {
+export const command: ICommand = {
   name: "invite",
-  description: "Create an invite link for the server",
+  description: "Get the bot's invite link",
   category: "utility",
-  permissions: [PermissionFlagsBits.CreateInstantInvite],
   slashCommand: true,
   prefixCommand: true,
   usage: "Slash: /invite\nPrefix: .invite",
+
+  data: new SlashCommandBuilder()
+    .setName("invite")
+    .setDescription("Get the bot's invite link"),
+
   async run(
-    interaction: ChatInputCommandInteraction | undefined,
-    message: Message | undefined,
+    interaction?: ChatInputCommandInteraction,
+    message?: Message,
+    args?: string[],
   ) {
-    const isSlashCommand = !!interaction;
-
-    if (!isSlashCommand && (!message?.channel || !message?.guild)) return;
-    if (isSlashCommand && (!interaction?.channel || !interaction?.guild))
-      return;
-
-    const channel = isSlashCommand ? interaction!.channel : message!.channel;
-    const executor = isSlashCommand ? interaction!.user : message!.author;
-
-    // Check if channel supports invites
-    const channelWithInvite = channel as any;
-    if (typeof channelWithInvite.createInvite !== "function") {
-      const embed = Embeds.error(
-        "Invalid Channel",
-        "Cannot create invites in this type of channel.",
-      );
-      if (isSlashCommand) {
-        return await interaction!.reply({ embeds: [embed], flags: [64] });
-      } else {
-        return await message!.reply({ embeds: [embed] });
-      }
-    }
-
     try {
-      const invite = await channelWithInvite.createInvite({
-        maxAge: 86400, // 24 hours
-        maxUses: 10,
-        reason: `Invite created by ${executor.tag}`,
-      });
+      const isSlashCommand = !!interaction;
+      const client = isSlashCommand ? interaction!.client : message!.client;
 
-      const embed = Embeds.success(
-        "Server Invite",
-        `Here's your invite link:\n**${invite.url}**\n\nExpires in 24 hours or after 10 uses.`,
-      );
+      if (!client.user) {
+        const errorEmbed = Embeds.error(
+          "Bot Error",
+          "Unable to get bot information. Please try again later.",
+        );
 
-      if (isSlashCommand) {
-        await interaction!.reply({ embeds: [embed] });
-      } else {
-        await message!.reply({ embeds: [embed] });
+        if (isSlashCommand && interaction) {
+          await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        } else if (message) {
+          await message.reply({ embeds: [errorEmbed] });
+        }
+        return;
+      }
+
+      // Generate invite link with comprehensive permissions
+      const inviteURL = `https://discord.com/api/oauth2/authorize?client_id=${client.user.id}&permissions=8&scope=bot%20applications.commands`;
+
+      // Generate minimal permissions invite link
+      const minimalInviteURL = `https://discord.com/api/oauth2/authorize?client_id=${client.user.id}&permissions=2147483647&scope=bot%20applications.commands`;
+
+      const embed = new EmbedBuilder()
+        .setTitle("🎭 Invite Kaoruko Bot")
+        .setDescription(
+          `Thank you for your interest in adding **${client.user.username}** to your server!`,
+        )
+        .setColor("#5865F2")
+        .setTimestamp()
+        .setThumbnail(client.user.displayAvatarURL({ size: 256 }))
+        .addFields(
+          {
+            name: "🔗 Full Permissions (Recommended)",
+            value: `[**Click here to invite with all permissions**](${inviteURL})`,
+            inline: false,
+          },
+          {
+            name: "⚡ Standard Permissions",
+            value: `[**Click here for standard invite**](${minimalInviteURL})`,
+            inline: false,
+          },
+          {
+            name: "📋 What permissions do I need?",
+            value: [
+              "• **Administrator** - For full functionality",
+              "• **Manage Channels** - For ticket system",
+              "• **Manage Messages** - For moderation",
+              "• **Send Messages** - Basic functionality",
+              "• **Embed Links** - Rich embeds",
+              "• **Use Slash Commands** - Modern commands",
+            ].join("\n"),
+            inline: false,
+          },
+          {
+            name: "✨ Key Features",
+            value: [
+              "🎫 Advanced ticket system",
+              "🛡️ Moderation tools",
+              "🎪 Fun commands",
+              "⚙️ Comprehensive configuration",
+              "📊 Polls and utilities",
+              "🔧 Custom commands",
+            ].join("\n"),
+            inline: false,
+          },
+          {
+            name: "🆘 Need Help?",
+            value: [
+              "[Support Server](https://discord.gg/support)",
+              "[Documentation](https://docs.example.com)",
+              "[GitHub](https://github.com/example/kaoruko-bot)",
+            ].join(" • "),
+            inline: false,
+          },
+        )
+        .setFooter({
+          text: `${client.user.username} • Made with ❤️`,
+          iconURL: client.user.displayAvatarURL(),
+        });
+
+      if (isSlashCommand && interaction) {
+        await interaction.reply({ embeds: [embed] });
+      } else if (message) {
+        await message.reply({ embeds: [embed] });
       }
     } catch (error) {
-      const embed = Embeds.error(
-        "Invite Creation Failed",
-        "Failed to create invite link.",
+      console.error("Error in invite command:", error);
+
+      const errorEmbed = Embeds.error(
+        "Command Error",
+        "An error occurred while generating the invite link. Please try again.",
       );
-      if (isSlashCommand) {
-        await interaction!.reply({ embeds: [embed], flags: [64] });
-      } else {
-        await message!.reply({ embeds: [embed] });
+
+      if (interaction) {
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply({ embeds: [errorEmbed] });
+        } else {
+          await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        }
+      } else if (message) {
+        await message.reply({ embeds: [errorEmbed] });
       }
     }
   },
-} as Command;
+};

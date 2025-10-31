@@ -1,30 +1,45 @@
-import { ChatInputCommandInteraction, Message } from "discord.js";
-import { Command } from "../../types";
+import {
+  ChatInputCommandInteraction,
+  Message,
+  SlashCommandBuilder,
+} from "discord.js";
+import { ICommand } from "../../types/Command";
 import { Embeds } from "../../utils/embeds";
 
-export default {
+export const command: ICommand = {
   name: "8ball",
   description: "Ask the magic 8-ball a question",
   category: "fun",
   slashCommand: true,
   prefixCommand: true,
   usage: "Slash: /8ball [question:<question>]\nPrefix: .8ball <question>",
+
+  data: new SlashCommandBuilder()
+    .setName("8ball")
+    .setDescription("Ask the magic 8-ball a question")
+    .addStringOption((option) =>
+      option
+        .setName("question")
+        .setDescription("Your question for the magic 8-ball")
+        .setRequired(true),
+    ),
+
   async run(
-    interaction: ChatInputCommandInteraction | undefined,
-    message: Message | undefined,
-    args: string[] | undefined,
+    interaction?: ChatInputCommandInteraction,
+    message?: Message,
+    args?: string[],
   ) {
     const isSlashCommand = !!interaction;
-    let question;
+    let question: string;
 
-    if (isSlashCommand) {
-      question = interaction!.options.getString("question", true);
+    if (isSlashCommand && interaction) {
+      question = interaction.options.getString("question", true);
     } else if (args && args.length > 0) {
       question = args.join(" ");
     } else {
       // Handle missing question for prefix command
       if (message) {
-        return await message.reply({
+        await message.reply({
           embeds: [
             Embeds.error("Invalid Command", "Please provide a question."),
           ],
@@ -63,10 +78,10 @@ export default {
       `**Question:** ${question}\n**Answer:** ${response}`,
     );
 
-    if (isSlashCommand) {
-      await interaction!.reply({ embeds: [embed] });
+    if (isSlashCommand && interaction) {
+      await interaction.reply({ embeds: [embed] });
     } else if (message) {
       await message.reply({ embeds: [embed] });
     }
   },
-} as Command;
+};

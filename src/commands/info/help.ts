@@ -1,153 +1,166 @@
-import { ChatInputCommandInteraction, Message, EmbedBuilder } from "discord.js";
-import { Command } from "../../types";
+import {
+  SlashCommandBuilder,
+  ChatInputCommandInteraction,
+  Message,
+  EmbedBuilder,
+} from "discord.js";
+import { ICommand } from "../../types/Command";
 import { Embeds } from "../../utils/embeds";
-import { Logger } from "../../utils/logger";
-import { config } from "../../config/config";
 
-export default {
+export const command: ICommand = {
   name: "help",
-  description: "Get help with bot commands",
+  description: "Get help for commands",
   category: "info",
   slashCommand: true,
   prefixCommand: true,
   usage: "Slash: /help [command]\nPrefix: .help [command]",
   examples: ["/help", "/help poll"],
+
+  data: new SlashCommandBuilder()
+    .setName("help")
+    .setDescription("Get help for commands")
+    .addStringOption((option) =>
+      option
+        .setName("command")
+        .setDescription("Get help for a specific command")
+        .setRequired(false)
+        .setAutocomplete(true),
+    ),
+
   async run(
-    interaction: ChatInputCommandInteraction | undefined,
-    message: Message | undefined,
-    args: string[] | undefined,
-    commandHandler: any,
+    interaction?: ChatInputCommandInteraction,
+    message?: Message,
+    args?: string[],
+    commandHandler?: any,
   ) {
     const isSlashCommand = !!interaction;
     const client = isSlashCommand ? interaction!.client : message!.client;
 
     if (!commandHandler) {
       const errorEmbed = Embeds.error(
-        "Help Error",
-        "Command handler not found.",
+        "Command Handler Error",
+        "Command handler is not available.",
       );
       if (isSlashCommand) {
-        return await interaction!.reply({
-          embeds: [errorEmbed],
-          flags: [64], // EPHEMERAL flag
-        });
-      } else {
-        return await message!.reply({ embeds: [errorEmbed] });
-      }
-    }
-
-    const commandName = isSlashCommand
-      ? interaction!.options.getString("command")
-      : args?.[0];
-
-    // Handle single command help
-    if (commandName) {
-      const command = commandHandler.commands.get(commandName.toLowerCase());
-
-      if (!command) {
-        const errorEmbed = Embeds.error(
-          "Command Not Found",
-          `The command \`${commandName}\` does not exist.`,
-        );
-        if (isSlashCommand) {
-          return await interaction!.reply({
-            embeds: [errorEmbed],
-            flags: [64],
-          });
-        } else {
-          return await message!.reply({ embeds: [errorEmbed] });
-        }
-      }
-
-      const embed = new EmbedBuilder()
-        .setTitle(`📖 Command Help: ${command.name}`)
-        .setDescription(command.description || "No description available.")
-        .setColor("#5865F2")
-        .addFields(
-          {
-            name: "🏷️ **Category**",
-            value: `\`${command.category || "Uncategorized"}\``,
-            inline: true,
-          },
-          {
-            name: "⚡ **Usage**",
-            value: `\`${command.usage || `/${command.name}`}\``,
-            inline: true,
-          },
-          {
-            name: "📝 **Command Types**",
-            value: `**Slash Command:** ${command.slashCommand ? "✅" : "❌"}\n**Prefix Command:** ${command.prefixCommand ? "✅" : "❌"}`,
-            inline: true,
-          },
-        );
-
-      if (command.aliases && command.aliases.length > 0) {
-        embed.addFields({
-          name: "🔗 **Aliases**",
-          value: command.aliases
-            .map((alias: string) => `\`${alias}\``)
-            .join(", "),
-          inline: false,
-        });
-      }
-
-      if (command.examples && command.examples.length > 0) {
-        embed.addFields({
-          name: "📝 **Examples**",
-          value: command.examples
-            .map((example: string) => `\`${example}\``)
-            .join("\n"),
-        });
-      }
-
-      if (isSlashCommand) {
-        await interaction!.reply({ embeds: [embed], flags: [64] });
-      } else {
-        await message!.reply({ embeds: [embed] });
+        await interaction!.reply({ embeds: [errorEmbed], ephemeral: true });
+      } else if (message) {
+        await message.reply({ embeds: [errorEmbed] });
       }
       return;
     }
 
-    // Handle main help menu with multiple embeds
-    const categories = commandHandler.getCategories();
-    const totalCommands = commandHandler.commands.size;
-    const embedsToSend: EmbedBuilder[] = [];
-
-    // Main embed containing all commands
-    const mainEmbed = new EmbedBuilder()
-      .setColor("#5865F2")
-      .setTitle("🤖 **Kaoruko Bot Help**")
-      .setDescription("A list of all my available commands:");
-
-    // Add command categories as fields to the main embed
-    for (const [category, commands] of categories) {
-      const commandList = commands
-        .map((cmd: any) => `\`${cmd.name}\``)
-        .join(", ");
-      mainEmbed.addFields({
-        name: `📁 **${category.charAt(0).toUpperCase() + category.slice(1)}** (${commands.length})`,
-        value: commandList,
-        inline: false,
-      });
-    }
-
-    // Embed for tips and footer
-    const tipsEmbed = new EmbedBuilder()
-      .setColor("#2F3136")
-      .setDescription(
-        `**💡 Use \`${config.prefix || "."}help <command>\` or \`/help [command]\` for more information on a specific command.**`,
-      )
-      .setFooter({
-        text: `Total Commands: ${totalCommands}`,
-        iconURL: client?.user?.displayAvatarURL(),
-      });
-
-    embedsToSend.push(mainEmbed, tipsEmbed);
+    let commandName: string | null = null;
 
     if (isSlashCommand) {
-      await interaction!.reply({ embeds: embedsToSend, flags: [64] });
+      commandName = interaction!.options.getString("command");
+    } else if (args && args.length > 0) {
+      commandName = args[0];
+    }
+
+    if (commandName) {
+      // Show help for specific command
+      const command = commandHandler.commands.get(commandName);
+      if (!command) {
+        const embed = Embeds.error(
+          "Command Not Found",
+          `The command \`${commandName}\` was not found.`,
+        );
+        if (isSlashCommand) {
+          await interaction!.reply({ embeds: [embed], ephemeral: true });
+        } else if (message) {
+          await message.reply({ embeds: [embed] });
+        }
+        return;
+      }
+
+      const embed = new EmbedBuilder()
+        .setTitle(`Help: ${command.name}`)
+        .setDescription(command.description || "No description available")
+        .setColor("#5865F2")
+        .setTimestamp();
+
+      if (command.usage) {
+        embed.addFields({
+          name: "Usage",
+          value: `\`\`\`${command.usage}\`\`\``,
+        });
+      }
+
+      if (command.examples) {
+        embed.addFields({
+          name: "Examples",
+          value: command.examples.map((ex: string) => `\`${ex}\``).join("\n"),
+        });
+      }
+
+      if (command.category) {
+        embed.addFields({
+          name: "Category",
+          value: command.category,
+          inline: true,
+        });
+      }
+
+      if (command.permissions && command.permissions.length > 0) {
+        embed.addFields({
+          name: "Required Permissions",
+          value: command.permissions.join(", "),
+          inline: true,
+        });
+      }
+
+      if (isSlashCommand) {
+        await interaction!.reply({ embeds: [embed] });
+      } else if (message) {
+        await message.reply({ embeds: [embed] });
+      }
     } else {
-      await message!.reply({ embeds: embedsToSend });
+      // Show general help
+      const commands = Array.from(commandHandler.commands.values());
+      const categories: { [key: string]: any[] } = {};
+
+      commands.forEach((cmd: any) => {
+        const category = cmd.category || "Other";
+        if (!categories[category]) {
+          categories[category] = [];
+        }
+        categories[category].push(cmd);
+      });
+
+      const embed = new EmbedBuilder()
+        .setTitle(`${client.user?.username} Help`)
+        .setDescription(
+          "Here are all available commands. Use `/help <command>` for detailed information about a specific command.",
+        )
+        .setColor("#5865F2")
+        .setTimestamp()
+        .setThumbnail(client.user?.displayAvatarURL() || null);
+
+      Object.keys(categories).forEach((category) => {
+        const categoryCommands = categories[category];
+        const commandList = categoryCommands
+          .map((cmd) => `\`${cmd.name}\``)
+          .join(", ");
+
+        embed.addFields({
+          name: `${category.charAt(0).toUpperCase() + category.slice(1)} (${categoryCommands.length})`,
+          value: commandList || "No commands",
+          inline: false,
+        });
+      });
+
+      embed.addFields({
+        name: "Links",
+        value:
+          "[Support Server](https://discord.gg/support) | [Invite Bot](https://discord.com/oauth2/authorize)",
+        inline: false,
+      });
+
+      if (isSlashCommand) {
+        await interaction!.reply({ embeds: [embed] });
+      } else if (message) {
+        await message.reply({ embeds: [embed] });
+      }
     }
   },
-} as Command;
+};

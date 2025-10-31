@@ -7,14 +7,20 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  StringSelectMenuBuilder,
   ChannelType,
   PermissionFlagsBits,
   CategoryChannel,
   Message,
   GuildMember,
-  Collection
+  Collection,
 } from "discord.js";
-import Ticket, { ITicket, TicketStatus, TicketCategory, TicketPriority } from "../models/Ticket";
+import Ticket, {
+  ITicket,
+  TicketStatus,
+  TicketCategory,
+  TicketPriority,
+} from "../models/Ticket";
 import TicketConfig, { ITicketConfig } from "../models/TicketConfig";
 import { Logger } from "../utils/logger";
 import { Embeds } from "../utils/embeds";
@@ -37,7 +43,7 @@ export class TicketService {
     user: User,
     category: TicketCategory = TicketCategory.GENERAL,
     subject?: string,
-    description?: string
+    description?: string,
   ): Promise<{ ticket: ITicket; channel: TextChannel } | null> {
     try {
       // Get ticket configuration
@@ -51,11 +57,19 @@ export class TicketService {
       const userTickets = await Ticket.find({
         guildId: guild.id,
         authorId: user.id,
-        status: { $in: [TicketStatus.OPEN, TicketStatus.IN_PROGRESS, TicketStatus.WAITING] }
+        status: {
+          $in: [
+            TicketStatus.OPEN,
+            TicketStatus.IN_PROGRESS,
+            TicketStatus.WAITING,
+          ],
+        },
       });
 
       if (userTickets.length >= config.maxTicketsPerUser) {
-        Logger.warn(`User ${user.id} has reached max tickets limit in guild ${guild.id}`);
+        Logger.warn(
+          `User ${user.id} has reached max tickets limit in guild ${guild.id}`,
+        );
         return null;
       }
 
@@ -63,8 +77,14 @@ export class TicketService {
       const ticketId = this.generateTicketId(guild.id);
 
       // Create ticket channel
-      const channelName = this.generateChannelName(config.channelName, user.username, ticketId);
-      const categoryChannel = config.categoryId ? guild.channels.cache.get(config.categoryId) as CategoryChannel : null;
+      const channelName = this.generateChannelName(
+        config.channelName,
+        user.username,
+        ticketId,
+      );
+      const categoryChannel = config.categoryId
+        ? (guild.channels.cache.get(config.categoryId) as CategoryChannel)
+        : null;
 
       const channel = await guild.channels.create({
         name: channelName,
@@ -73,7 +93,7 @@ export class TicketService {
         permissionOverwrites: [
           {
             id: guild.id, // @everyone
-            deny: [PermissionFlagsBits.ViewChannel]
+            deny: [PermissionFlagsBits.ViewChannel],
           },
           {
             id: user.id,
@@ -82,10 +102,10 @@ export class TicketService {
               PermissionFlagsBits.SendMessages,
               PermissionFlagsBits.ReadMessageHistory,
               PermissionFlagsBits.AttachFiles,
-              PermissionFlagsBits.EmbedLinks
-            ]
-          }
-        ]
+              PermissionFlagsBits.EmbedLinks,
+            ],
+          },
+        ],
       });
 
       // Add support role permissions
@@ -98,7 +118,7 @@ export class TicketService {
             ReadMessageHistory: true,
             AttachFiles: true,
             EmbedLinks: true,
-            ManageMessages: true
+            ManageMessages: true,
           });
         }
       }
@@ -114,7 +134,7 @@ export class TicketService {
             AttachFiles: true,
             EmbedLinks: true,
             ManageMessages: true,
-            ManageChannels: true
+            ManageChannels: true,
           });
         }
       }
@@ -131,12 +151,14 @@ export class TicketService {
         priority: TicketPriority.NORMAL,
         status: TicketStatus.OPEN,
         description,
-        users: [{
-          userId: user.id,
-          username: user.username,
-          discriminator: user.discriminator,
-          addedAt: new Date()
-        }]
+        users: [
+          {
+            userId: user.id,
+            username: user.username,
+            discriminator: user.discriminator,
+            addedAt: new Date(),
+          },
+        ],
       });
 
       await ticket.save();
@@ -146,24 +168,33 @@ export class TicketService {
 
       // Log ticket creation
       if (config.logChannelId) {
-        await this.logTicketEvent(guild, config.logChannelId, 'created', ticket, user);
+        await this.logTicketEvent(
+          guild,
+          config.logChannelId,
+          "created",
+          ticket,
+          user,
+        );
       }
 
       // Mention support roles if enabled
       if (config.mentionSupportOnCreate) {
         const mentions = config.supportRoles
-          .map(roleId => `<@&${roleId}>`)
-          .join(' ');
+          .map((roleId) => `<@&${roleId}>`)
+          .join(" ");
         if (mentions) {
           await channel.send(`${mentions} New ticket created!`);
         }
       }
 
-      Logger.info(`Ticket ${ticketId} created in guild ${guild.id} by user ${user.id}`);
+      Logger.info(
+        `Ticket ${ticketId} created in guild ${guild.id} by user ${user.id}`,
+      );
       return { ticket, channel };
-
     } catch (error) {
-      Logger.error(`Failed to create ticket in guild ${guild.id}:`, error);
+      Logger.error(
+        `Failed to create ticket in guild ${guild.id}:` + ": " + error,
+      );
       return null;
     }
   }
@@ -176,7 +207,7 @@ export class TicketService {
     ticketId: string,
     closedBy: User,
     reason?: string,
-    generateTranscript: boolean = true
+    generateTranscript: boolean = true,
   ): Promise<boolean> {
     try {
       const ticket = await Ticket.findOne({ ticketId, guildId: guild.id });
@@ -195,7 +226,10 @@ export class TicketService {
       if (!channel) {
         Logger.warn(`Ticket channel ${ticket.channelId} not found`);
         // Update ticket status anyway
-        await ticket.updateStatus(TicketStatus.CLOSED, closedBy.id);
+        ticket.status = TicketStatus.CLOSED;
+        ticket.closedBy = closedBy.id;
+        ticket.closedAt = new Date();
+        await ticket.save();
         return true;
       }
 
@@ -214,42 +248,55 @@ export class TicketService {
 
       // Send closing message
       const embed = new EmbedBuilder()
-        .setTitle('🔒 Ticket Closed')
+        .setTitle("🔒 Ticket Closed")
         .setDescription(`This ticket has been closed by ${closedBy.tag}`)
         .addFields(
-          { name: 'Ticket ID', value: ticket.ticketId, inline: true },
-          { name: 'Closed At', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
+          { name: "Ticket ID", value: ticket.ticketId, inline: true },
+          {
+            name: "Closed At",
+            value: `<t:${Math.floor(Date.now() / 1000)}:F>`,
+            inline: true,
+          },
         )
-        .setColor('#FF0000')
+        .setColor("#FF0000")
         .setTimestamp();
 
       if (reason) {
-        embed.addFields({ name: 'Reason', value: reason });
+        embed.addFields({ name: "Reason", value: reason });
       }
 
       if (transcriptUrl) {
-        embed.addFields({ name: 'Transcript', value: `[Download](${transcriptUrl})` });
+        embed.addFields({
+          name: "Transcript",
+          value: `[Download](${transcriptUrl})`,
+        });
       }
 
-      const row = new ActionRowBuilder<ButtonBuilder>()
-        .addComponents(
-          new ButtonBuilder()
-            .setCustomId(`ticket_reopen_${ticket.ticketId}`)
-            .setLabel('Reopen Ticket')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('🔓'),
-          new ButtonBuilder()
-            .setCustomId(`ticket_delete_${ticket.ticketId}`)
-            .setLabel('Delete Ticket')
-            .setStyle(ButtonStyle.Danger)
-            .setEmoji('🗑️')
-        );
+      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`ticket_reopen_${ticket.ticketId}`)
+          .setLabel("Reopen Ticket")
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji("🔓"),
+        new ButtonBuilder()
+          .setCustomId(`ticket_delete_${ticket.ticketId}`)
+          .setLabel("Delete Ticket")
+          .setStyle(ButtonStyle.Danger)
+          .setEmoji("🗑️"),
+      );
 
       await channel.send({ embeds: [embed], components: [row] });
 
       // Log ticket closure
       if (config.logChannelId) {
-        await this.logTicketEvent(guild, config.logChannelId, 'closed', ticket, closedBy, reason);
+        await this.logTicketEvent(
+          guild,
+          config.logChannelId,
+          "closed",
+          ticket,
+          closedBy,
+          reason,
+        );
       }
 
       // Send DM to ticket author if enabled
@@ -259,23 +306,33 @@ export class TicketService {
 
       // Auto-delete after configured time
       if (config.autoDeleteAfter) {
-        setTimeout(async () => {
-          try {
-            const channelToDelete = guild.channels.cache.get(ticket.channelId);
-            if (channelToDelete) {
-              await channelToDelete.delete('Ticket auto-delete');
+        setTimeout(
+          async () => {
+            try {
+              const channelToDelete = guild.channels.cache.get(
+                ticket.channelId,
+              );
+              if (channelToDelete) {
+                await channelToDelete.delete("Ticket auto-delete");
+              }
+            } catch (error) {
+              Logger.error(
+                `Failed to auto-delete ticket channel ${ticket.channelId}: ${error}`,
+              );
             }
-          } catch (error) {
-            Logger.error(`Failed to auto-delete ticket channel ${ticket.channelId}:`, error);
-          }
-        }, config.autoDeleteAfter * 60 * 60 * 1000); // Convert hours to milliseconds
+          },
+          config.autoDeleteAfter * 60 * 60 * 1000,
+        ); // Convert hours to milliseconds
       }
 
-      Logger.info(`Ticket ${ticketId} closed in guild ${guild.id} by user ${closedBy.id}`);
+      Logger.info(
+        `Ticket ${ticketId} closed in guild ${guild.id} by user ${closedBy.id}`,
+      );
       return true;
-
     } catch (error) {
-      Logger.error(`Failed to close ticket ${ticketId} in guild ${guild.id}:`, error);
+      Logger.error(
+        `Failed to close ticket ${ticketId} in guild ${guild.id}: ${error}`,
+      );
       return false;
     }
   }
@@ -283,7 +340,11 @@ export class TicketService {
   /**
    * Reopen a ticket
    */
-  async reopenTicket(guild: Guild, ticketId: string, reopenedBy: User): Promise<boolean> {
+  async reopenTicket(
+    guild: Guild,
+    ticketId: string,
+    reopenedBy: User,
+  ): Promise<boolean> {
     try {
       const ticket = await Ticket.findOne({ ticketId, guildId: guild.id });
       if (!ticket) {
@@ -292,7 +353,7 @@ export class TicketService {
       }
 
       if (ticket.status !== TicketStatus.CLOSED) {
-        Logger.warn(`Ticket ${ticketId} is not closed, cannot reopen`);
+        Logger.warn(`Ticket ${ticketId} is not closed + ": " + cannot reopen`);
         return false;
       }
 
@@ -303,18 +364,32 @@ export class TicketService {
       }
 
       // Reopen ticket
-      await ticket.reopen();
+      ticket.status = TicketStatus.OPEN;
+      ticket.reopenCount += 1;
+      ticket.closedBy = undefined;
+      ticket.closedAt = undefined;
+      ticket.closeReason = undefined;
+      ticket.lastActivity = new Date();
+      await ticket.save();
 
       // Send reopening message
       const embed = new EmbedBuilder()
-        .setTitle('🔓 Ticket Reopened')
+        .setTitle("🔓 Ticket Reopened")
         .setDescription(`This ticket has been reopened by ${reopenedBy.tag}`)
         .addFields(
-          { name: 'Ticket ID', value: ticket.ticketId, inline: true },
-          { name: 'Reopened At', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
-          { name: 'Reopen Count', value: ticket.reopenCount.toString(), inline: true }
+          { name: "Ticket ID", value: ticket.ticketId, inline: true },
+          {
+            name: "Reopened At",
+            value: `<t:${Math.floor(Date.now() / 1000)}:F>`,
+            inline: true,
+          },
+          {
+            name: "Reopen Count",
+            value: ticket.reopenCount.toString(),
+            inline: true,
+          },
         )
-        .setColor('#00FF00')
+        .setColor("#00FF00")
         .setTimestamp();
 
       await channel.send({ embeds: [embed] });
@@ -322,14 +397,23 @@ export class TicketService {
       // Log ticket reopening
       const config = await TicketConfig.findByGuild(guild.id);
       if (config && config.logChannelId) {
-        await this.logTicketEvent(guild, config.logChannelId, 'reopened', ticket, reopenedBy);
+        await this.logTicketEvent(
+          guild,
+          config.logChannelId,
+          "reopened",
+          ticket,
+          reopenedBy,
+        );
       }
 
-      Logger.info(`Ticket ${ticketId} reopened in guild ${guild.id} by user ${reopenedBy.id}`);
+      Logger.info(
+        `Ticket ${ticketId} reopened in guild ${guild.id} by user ${reopenedBy.id}`,
+      );
       return true;
-
     } catch (error) {
-      Logger.error(`Failed to reopen ticket ${ticketId} in guild ${guild.id}:`, error);
+      Logger.error(
+        `Failed to reopen ticket ${ticketId} in guild ${guild.id}: ${error}`,
+      );
       return false;
     }
   }
@@ -337,7 +421,12 @@ export class TicketService {
   /**
    * Add user to ticket
    */
-  async addUserToTicket(guild: Guild, ticketId: string, user: User, addedBy: User): Promise<boolean> {
+  async addUserToTicket(
+    guild: Guild,
+    ticketId: string,
+    user: User,
+    addedBy: User,
+  ): Promise<boolean> {
     try {
       const ticket = await Ticket.findOne({ ticketId, guildId: guild.id });
       if (!ticket) return false;
@@ -351,26 +440,38 @@ export class TicketService {
         SendMessages: true,
         ReadMessageHistory: true,
         AttachFiles: true,
-        EmbedLinks: true
+        EmbedLinks: true,
       });
 
       // Add to ticket database
-      await ticket.addUser(user.id, user.username, user.discriminator);
+      const existingUser = ticket.users.find((u: any) => u.userId === user.id);
+      if (!existingUser) {
+        ticket.users.push({
+          userId: user.id,
+          username: user.username,
+          discriminator: user.discriminator,
+          addedAt: new Date(),
+        });
+        await ticket.save();
+      }
 
       // Send notification
       const embed = new EmbedBuilder()
-        .setTitle('👤 User Added to Ticket')
-        .setDescription(`${user.tag} has been added to this ticket by ${addedBy.tag}`)
-        .setColor('#00FF00')
+        .setTitle("👤 User Added to Ticket")
+        .setDescription(
+          `${user.tag} has been added to this ticket by ${addedBy.tag}`,
+        )
+        .setColor("#00FF00")
         .setTimestamp();
 
       await channel.send({ embeds: [embed] });
 
-      Logger.info(`User ${user.id} added to ticket ${ticketId} by ${addedBy.id}`);
+      Logger.info(
+        `User ${user.id} added to ticket ${ticketId} by ${addedBy.id}`,
+      );
       return true;
-
     } catch (error) {
-      Logger.error(`Failed to add user to ticket ${ticketId}:`, error);
+      Logger.error(`Failed to add user to ticket ${ticketId}:` + ": " + error);
       return false;
     }
   }
@@ -378,7 +479,12 @@ export class TicketService {
   /**
    * Remove user from ticket
    */
-  async removeUserFromTicket(guild: Guild, ticketId: string, user: User, removedBy: User): Promise<boolean> {
+  async removeUserFromTicket(
+    guild: Guild,
+    ticketId: string,
+    user: User,
+    removedBy: User,
+  ): Promise<boolean> {
     try {
       const ticket = await Ticket.findOne({ ticketId, guildId: guild.id });
       if (!ticket) return false;
@@ -390,22 +496,28 @@ export class TicketService {
       await channel.permissionOverwrites.delete(user.id);
 
       // Remove from ticket database
-      await ticket.removeUser(user.id);
+      ticket.users = ticket.users.filter((u: any) => u.userId !== user.id);
+      await ticket.save();
 
       // Send notification
       const embed = new EmbedBuilder()
-        .setTitle('👤 User Removed from Ticket')
-        .setDescription(`${user.tag} has been removed from this ticket by ${removedBy.tag}`)
-        .setColor('#FF0000')
+        .setTitle("👤 User Removed from Ticket")
+        .setDescription(
+          `${user.tag} has been removed from this ticket by ${removedBy.tag}`,
+        )
+        .setColor("#FF0000")
         .setTimestamp();
 
       await channel.send({ embeds: [embed] });
 
-      Logger.info(`User ${user.id} removed from ticket ${ticketId} by ${removedBy.id}`);
+      Logger.info(
+        `User ${user.id} removed from ticket ${ticketId} by ${removedBy.id}`,
+      );
       return true;
-
     } catch (error) {
-      Logger.error(`Failed to remove user from ticket ${ticketId}:`, error);
+      Logger.error(
+        `Failed to remove user from ticket ${ticketId}:` + ": " + error,
+      );
       return false;
     }
   }
@@ -413,51 +525,79 @@ export class TicketService {
   /**
    * Create ticket panel
    */
-  async createTicketPanel(guild: Guild, channel: TextChannel, config: ITicketConfig): Promise<Message | null> {
+  async createTicketPanel(
+    guild: Guild,
+    channel: TextChannel,
+    config: ITicketConfig,
+  ): Promise<Message | null> {
     try {
       const embed = new EmbedBuilder()
         .setTitle(config.panelTitle)
-        .setDescription(config.panelDescription)
-        .setColor(config.panelColor)
+        .setDescription(
+          config.panelDescription +
+            "\n\n🎫 **How to create a ticket:**\n" +
+            "1. Select a category from the dropdown menu below\n" +
+            "2. Fill out the ticket form\n" +
+            "3. Wait for our support team to assist you\n\n" +
+            "📊 Use the buttons below for ticket management",
+        )
+        .setColor(config.panelColor as any)
         .setTimestamp()
-        .setFooter({ text: `${guild.name} Support`, iconURL: guild.iconURL() || undefined });
+        .setFooter({
+          text: `${guild.name} Support System`,
+          iconURL: guild.iconURL() || undefined,
+        });
 
       if (config.panelThumbnail) {
         embed.setThumbnail(config.panelThumbnail);
       }
 
-      // Create buttons for categories
-      const rows: ActionRowBuilder<ButtonBuilder>[] = [];
-      let currentRow = new ActionRowBuilder<ButtonBuilder>();
-      let buttonCount = 0;
+      // Create dropdown menu for categories
+      const selectMenu = new StringSelectMenuBuilder()
+        .setCustomId("ticket_category_select")
+        .setPlaceholder("📋 Select a ticket category...")
+        .setMinValues(1)
+        .setMaxValues(1);
 
+      // Add category options to dropdown
       for (const [categoryId, categoryConfig] of config.categories) {
-        if (buttonCount >= 5) {
-          rows.push(currentRow);
-          currentRow = new ActionRowBuilder<ButtonBuilder>();
-          buttonCount = 0;
-        }
-
-        const button = new ButtonBuilder()
-          .setCustomId(`ticket_create_${categoryId}`)
-          .setLabel(categoryConfig.name)
-          .setStyle(ButtonStyle.Primary);
-
-        if (categoryConfig.emoji) {
-          button.setEmoji(categoryConfig.emoji);
-        }
-
-        currentRow.addComponents(button);
-        buttonCount++;
+        const option = {
+          label: categoryConfig.name,
+          value: categoryId,
+          description: categoryConfig.description || "No description available",
+          emoji: categoryConfig.emoji || undefined,
+        };
+        selectMenu.addOptions(option);
       }
 
-      if (currentRow.components.length > 0) {
-        rows.push(currentRow);
-      }
+      const selectRow =
+        new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+          selectMenu,
+        );
+
+      // Create management buttons
+      const managementButtons =
+        new ActionRowBuilder<ButtonBuilder>().addComponents(
+          new ButtonBuilder()
+            .setCustomId("ticket_panel_info")
+            .setLabel("Ticket Info")
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji("ℹ️"),
+          new ButtonBuilder()
+            .setCustomId("ticket_panel_stats")
+            .setLabel("Statistics")
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji("📊"),
+          new ButtonBuilder()
+            .setCustomId("ticket_manage_categories")
+            .setLabel("Manage Categories")
+            .setStyle(ButtonStyle.Success)
+            .setEmoji("⚙️"),
+        );
 
       const message = await channel.send({
         embeds: [embed],
-        components: rows
+        components: [selectRow, managementButtons],
       });
 
       // Update config with panel message ID
@@ -465,11 +605,14 @@ export class TicketService {
       config.panelChannelId = channel.id;
       await config.save();
 
-      Logger.info(`Ticket panel created in channel ${channel.id} for guild ${guild.id}`);
+      Logger.info(
+        `Ticket panel created in channel ${channel.id} for guild ${guild.id}`,
+      );
       return message;
-
     } catch (error) {
-      Logger.error(`Failed to create ticket panel in guild ${guild.id}:`, error);
+      Logger.error(
+        `Failed to create ticket panel in guild ${guild.id}: ${error}`,
+      );
       return null;
     }
   }
@@ -480,14 +623,14 @@ export class TicketService {
   private async generateTranscript(
     channel: TextChannel,
     ticket: ITicket,
-    config: ITicketConfig
+    config: ITicketConfig,
   ): Promise<string | null> {
     try {
       // This is a simplified transcript generation
       // In a real implementation, you might use a proper transcript service
       const messages = await this.fetchAllMessages(channel);
 
-      let transcript = '';
+      let transcript = "";
       transcript += `Ticket ID: ${ticket.ticketId}\n`;
       transcript += `Created: ${ticket.createdAt.toISOString()}\n`;
       transcript += `Author: ${ticket.authorName}\n`;
@@ -507,9 +650,10 @@ export class TicketService {
       // In a real implementation, you'd upload this to a file hosting service
       // For now, we'll just return a placeholder URL
       return `https://transcripts.example.com/${ticket.ticketId}.txt`;
-
     } catch (error) {
-      Logger.error(`Failed to generate transcript for ticket ${ticket.ticketId}:`, error);
+      Logger.error(
+        `Failed to generate transcript for ticket ${ticket.ticketId}: ${error}`,
+      );
       return null;
     }
   }
@@ -527,11 +671,14 @@ export class TicketService {
         options.before = lastMessageId;
       }
 
-      const fetchedMessages = await channel.messages.fetch(options);
-      if (fetchedMessages.size === 0) break;
+      const fetchedMessages = (await channel.messages.fetch(options)) as any;
+      if (!fetchedMessages || fetchedMessages.size === 0) break;
 
-      messages.push(...fetchedMessages.values());
-      lastMessageId = fetchedMessages.last()?.id;
+      for (const message of fetchedMessages.values()) {
+        messages.push(message);
+      }
+      const messagesArray = Array.from(fetchedMessages.values());
+      lastMessageId = (messagesArray[messagesArray.length - 1] as any)?.id;
     }
 
     return messages.reverse(); // Return in chronological order
@@ -544,38 +691,43 @@ export class TicketService {
     channel: TextChannel,
     ticket: ITicket,
     config: ITicketConfig,
-    user: User
+    user: User,
   ): Promise<void> {
     const embed = new EmbedBuilder()
-      .setTitle('🎫 New Support Ticket')
-      .setDescription(`Hello ${user.tag}! Thank you for creating a support ticket. Our team will assist you shortly.`)
-      .addFields(
-        { name: 'Ticket ID', value: ticket.ticketId, inline: true },
-        { name: 'Category', value: ticket.category, inline: true },
-        { name: 'Priority', value: ticket.priority, inline: true },
-        { name: 'Created', value: `<t:${Math.floor(ticket.createdAt.getTime() / 1000)}:F>`, inline: false }
+      .setTitle("🎫 New Support Ticket")
+      .setDescription(
+        `Hello ${user.tag}! Thank you for creating a support ticket. Our team will assist you shortly.`,
       )
-      .setColor(config.panelColor)
+      .addFields(
+        { name: "Ticket ID", value: ticket.ticketId, inline: true },
+        { name: "Category", value: ticket.category, inline: true },
+        { name: "Priority", value: ticket.priority, inline: true },
+        {
+          name: "Created",
+          value: `<t:${Math.floor(ticket.createdAt.getTime() / 1000)}:F>`,
+          inline: false,
+        },
+      )
+      .setColor(config.panelColor as any)
       .setTimestamp()
       .setThumbnail(user.displayAvatarURL());
 
     if (ticket.description) {
-      embed.addFields({ name: 'Description', value: ticket.description });
+      embed.addFields({ name: "Description", value: ticket.description });
     }
 
-    const row = new ActionRowBuilder<ButtonBuilder>()
-      .addComponents(
-        new ButtonBuilder()
-          .setCustomId(`ticket_close_${ticket.ticketId}`)
-          .setLabel('Close Ticket')
-          .setStyle(ButtonStyle.Danger)
-          .setEmoji('🔒'),
-        new ButtonBuilder()
-          .setCustomId(`ticket_claim_${ticket.ticketId}`)
-          .setLabel('Claim Ticket')
-          .setStyle(ButtonStyle.Success)
-          .setEmoji('✋')
-      );
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`ticket_close_${ticket.ticketId}`)
+        .setLabel("Close Ticket")
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji("🔒"),
+      new ButtonBuilder()
+        .setCustomId(`ticket_claim_${ticket.ticketId}`)
+        .setLabel("Claim Ticket")
+        .setStyle(ButtonStyle.Success)
+        .setEmoji("✋"),
+    );
 
     await channel.send({ embeds: [embed], components: [row] });
   }
@@ -587,35 +739,45 @@ export class TicketService {
     userId: string,
     guild: Guild,
     ticket: ITicket,
-    transcriptUrl?: string | null
+    transcriptUrl?: string | null,
   ): Promise<void> {
     try {
       const user = await guild.client.users.fetch(userId);
 
       const embed = new EmbedBuilder()
-        .setTitle('🔒 Ticket Closed')
-        .setDescription(`Your support ticket in **${guild.name}** has been closed.`)
-        .addFields(
-          { name: 'Ticket ID', value: ticket.ticketId, inline: true },
-          { name: 'Category', value: ticket.category, inline: true },
-          { name: 'Closed At', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
+        .setTitle("🔒 Ticket Closed")
+        .setDescription(
+          `Your support ticket in **${guild.name}** has been closed.`,
         )
-        .setColor('#FF0000')
+        .addFields(
+          { name: "Ticket ID", value: ticket.ticketId, inline: true },
+          { name: "Category", value: ticket.category, inline: true },
+          {
+            name: "Closed At",
+            value: `<t:${Math.floor(Date.now() / 1000)}:F>`,
+            inline: true,
+          },
+        )
+        .setColor("#FF0000" as any)
         .setTimestamp()
         .setThumbnail(guild.iconURL());
 
       if (ticket.closeReason) {
-        embed.addFields({ name: 'Reason', value: ticket.closeReason });
+        embed.addFields({ name: "Reason", value: ticket.closeReason });
       }
 
       if (transcriptUrl) {
-        embed.addFields({ name: 'Transcript', value: `[Download Transcript](${transcriptUrl})` });
+        embed.addFields({
+          name: "Transcript",
+          value: `[Download Transcript](${transcriptUrl})`,
+        });
       }
 
       await user.send({ embeds: [embed] });
-
     } catch (error) {
-      Logger.warn(`Failed to send closure DM to user ${userId}:`, error);
+      Logger.warn(
+        `Failed to send closure DM to user ${userId}:` + ": " + error,
+      );
     }
   }
 
@@ -628,7 +790,7 @@ export class TicketService {
     event: string,
     ticket: ITicket,
     user: User,
-    reason?: string
+    reason?: string,
   ): Promise<void> {
     try {
       const logChannel = guild.channels.cache.get(logChannelId) as TextChannel;
@@ -637,25 +799,30 @@ export class TicketService {
       const embed = new EmbedBuilder()
         .setTitle(`📋 Ticket ${event.charAt(0).toUpperCase() + event.slice(1)}`)
         .addFields(
-          { name: 'Ticket ID', value: ticket.ticketId, inline: true },
-          { name: 'User', value: `${user.tag} (${user.id})`, inline: true },
-          { name: 'Channel', value: `<#${ticket.channelId}>`, inline: true },
-          { name: 'Category', value: ticket.category, inline: true },
-          { name: 'Status', value: ticket.status, inline: true },
-          { name: 'Timestamp', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
+          { name: "Ticket ID", value: ticket.ticketId, inline: true },
+          { name: "User", value: `${user.tag} (${user.id})`, inline: true },
+          { name: "Channel", value: `<#${ticket.channelId}>`, inline: true },
+          { name: "Category", value: ticket.category, inline: true },
+          { name: "Status", value: ticket.status, inline: true },
+          {
+            name: "Timestamp",
+            value: `<t:${Math.floor(Date.now() / 1000)}:F>`,
+            inline: true,
+          },
         )
-        .setColor(this.getEventColor(event))
+        .setColor(this.getEventColor(event) as any)
         .setTimestamp()
         .setThumbnail(user.displayAvatarURL());
 
       if (reason) {
-        embed.addFields({ name: 'Reason', value: reason });
+        embed.addFields({ name: "Reason", value: reason });
       }
 
       await logChannel.send({ embeds: [embed] });
-
     } catch (error) {
-      Logger.error(`Failed to log ticket event ${event} for ticket ${ticket.ticketId}:`, error);
+      Logger.error(
+        `Failed to log ticket event ${event} for ticket ${ticket.ticketId}: ${error}`,
+      );
     }
   }
 
@@ -671,11 +838,15 @@ export class TicketService {
   /**
    * Generate channel name
    */
-  private generateChannelName(format: string, username: string, ticketId: string): string {
+  private generateChannelName(
+    format: string,
+    username: string,
+    ticketId: string,
+  ): string {
     return format
-      .replace('{username}', username.toLowerCase().replace(/[^a-z0-9]/g, '-'))
-      .replace('{ticketid}', ticketId.toLowerCase())
-      .replace('{number}', Math.floor(Math.random() * 1000).toString());
+      .replace("{username}", username.toLowerCase().replace(/[^a-z0-9]/g, "-"))
+      .replace("{ticketid}", ticketId.toLowerCase())
+      .replace("{number}", Math.floor(Math.random() * 1000).toString());
   }
 
   /**
@@ -683,11 +854,16 @@ export class TicketService {
    */
   private getEventColor(event: string): string {
     switch (event) {
-      case 'created': return '#00FF00';
-      case 'closed': return '#FF0000';
-      case 'reopened': return '#FFFF00';
-      case 'claimed': return '#0000FF';
-      default: return '#FFFFFF';
+      case "created":
+        return "#00FF00";
+      case "closed":
+        return "#FF0000";
+      case "reopened":
+        return "#FFFF00";
+      case "claimed":
+        return "#0000FF";
+      default:
+        return "#FFFFFF";
     }
   }
 }

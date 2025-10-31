@@ -4,15 +4,15 @@ import {
   Routes,
   ApplicationCommandOptionType,
 } from "discord.js";
-import { Command } from "../types";
+import { ICommand } from "../types/Command";
 import { Logger } from "../utils/logger";
 import fs from "fs";
 import path from "path";
 
 export class CommandHandler {
-  public commands: Collection<string, Command> = new Collection();
-  public slashCommands: Collection<string, Command> = new Collection();
-  private categories: Map<string, Command[]> = new Map();
+  public commands: Collection<string, ICommand> = new Collection();
+  public slashCommands: Collection<string, ICommand> = new Collection();
+  private categories: Map<string, ICommand[]> = new Map();
 
   async loadCommands(clientId: string, token: string) {
     const commandsPath = path.join(__dirname, "../commands");
@@ -20,13 +20,16 @@ export class CommandHandler {
 
     for (const file of commandFiles) {
       try {
-        if (!file.endsWith(".js")) continue;
+        if (!file.endsWith(".js") && !file.endsWith(".ts")) continue;
 
         const commandModule = await import(file);
-        const command: Command = commandModule.default || commandModule;
+        const command: ICommand =
+          commandModule.command || commandModule.default;
 
-        if (!command.name || !command.description) {
-          Logger.warn(`Invalid command in ${file}`);
+        if (!command || !command.name || !command.description) {
+          Logger.warn(
+            `Invalid command in ${file} - missing name, description, or proper export`,
+          );
           continue;
         }
 
@@ -37,10 +40,11 @@ export class CommandHandler {
         }
 
         // Categorize commands
-        if (!this.categories.has(command.category)) {
-          this.categories.set(command.category, []);
+        const category = command.category || "Uncategorized";
+        if (!this.categories.has(category)) {
+          this.categories.set(category, []);
         }
-        this.categories.get(command.category)?.push(command);
+        this.categories.get(category)?.push(command);
 
         Logger.info(`Loaded command: ${command.name}`);
       } catch (error) {
@@ -67,7 +71,10 @@ export class CommandHandler {
 
       if (item.isDirectory()) {
         files.push(...this.getCommandFiles(fullPath));
-      } else if (item.isFile() && item.name.endsWith(".js")) {
+      } else if (
+        item.isFile() &&
+        (item.name.endsWith(".js") || item.name.endsWith(".ts"))
+      ) {
         files.push(fullPath);
       }
     }
@@ -78,142 +85,30 @@ export class CommandHandler {
   private async registerSlashCommands(clientId: string, token: string) {
     const rest = new REST({ version: "10" }).setToken(token);
 
-    // Build commands data with proper options
+    // Build commands data from loaded commands
     const commandsData = [];
 
-    // Add help command with autocomplete
-    commandsData.push({
-      name: "help",
-      description: "Get help with bot commands",
-      options: [
-        {
-          name: "command",
-          description: "The command to get help for",
-          type: ApplicationCommandOptionType.String,
-          required: false,
-          autocomplete: true,
-        },
-      ],
-    });
-
-    // Add poll command with all options
-    commandsData.push({
-      name: "poll",
-      description: "Create an interactive poll with up to 6 options",
-      options: [
-        {
-          name: "question",
-          description: "The poll question",
-          type: ApplicationCommandOptionType.String,
-          required: true,
-        },
-        {
-          name: "option1",
-          description: "First option",
-          type: ApplicationCommandOptionType.String,
-          required: true,
-        },
-        {
-          name: "option2",
-          description: "Second option",
-          type: ApplicationCommandOptionType.String,
-          required: true,
-        },
-        {
-          name: "option3",
-          description: "Third option (optional)",
-          type: ApplicationCommandOptionType.String,
-          required: false,
-        },
-        {
-          name: "option4",
-          description: "Fourth option (optional)",
-          type: ApplicationCommandOptionType.String,
-          required: false,
-        },
-        {
-          name: "option5",
-          description: "Fifth option (optional)",
-          type: ApplicationCommandOptionType.String,
-          required: false,
-        },
-        {
-          name: "option6",
-          description: "Sixth option (optional)",
-          type: ApplicationCommandOptionType.String,
-          required: false,
-        },
-        {
-          name: "anonymous",
-          description: "Make poll anonymous (default: false)",
-          type: ApplicationCommandOptionType.Boolean,
-          required: false,
-        },
-        {
-          name: "duration",
-          description: "Poll duration in minutes (0 = no end, max 1440)",
-          type: ApplicationCommandOptionType.Integer,
-          required: false,
-        },
-      ],
-    });
-
-    // Add endpoll command
-    commandsData.push({
-      name: "endpoll",
-      description: "End a poll early and show results",
-      options: [
-        {
-          name: "message_id",
-          description:
-            "The message ID of the poll to end (leave empty for help)",
-          type: ApplicationCommandOptionType.String,
-          required: false,
-        },
-        {
-          name: "use_last",
-          description: "End the most recent poll",
-          type: ApplicationCommandOptionType.Boolean,
-          required: false,
-        },
-      ],
-    });
-
-    // Add testerror command
-    commandsData.push({
-      name: "testerror",
-      description: "Test command to verify error handling (Owner only)",
-      options: [
-        {
-          name: "error_type",
-          description: "Type of error to test",
-          type: 3,
-          required: false,
-          choices: [
-            { name: "General Error", value: "general" },
-            { name: "Reference Error", value: "reference" },
-            { name: "Timeout Error", value: "timeout" },
-          ],
-        },
-      ],
-    });
-
-    // Add other slash commands
-    const otherCommands = Array.from(this.slashCommands.values())
-      .filter(
-        (cmd) =>
-          cmd.name !== "help" &&
-          cmd.name !== "poll" &&
-          cmd.name !== "endpoll" &&
-          cmd.name !== "testerror",
-      )
-      .map((cmd) => ({
-        name: cmd.name,
-        description: cmd.description,
-        options: [],
-      }));
-
-    commandsData.push(...otherCommands);
+    // Process all slash commands
+    for (const command of this.slashCommands.values()) {
+      try {
+        if (command.data && typeof command.data.toJSON === "function") {
+          // Use the SlashCommandBuilder data if available
+          commandsData.push(command.data.toJSON());
+        } else {
+          // Fallback to basic command structure
+          commandsData.push({
+            name: command.name,
+            description: command.description,
+            options: [],
+          });
+        }
+        Logger.info(`Registered slash command: ${command.name}`);
+      } catch (error) {
+        Logger.error(
+          `Error processing command ${command.name} for registration: ${error}`,
+        );
+      }
+    }
 
     try {
       Logger.info("Started refreshing application (/) commands.");
@@ -228,11 +123,11 @@ export class CommandHandler {
     }
   }
 
-  getCategories(): Map<string, Command[]> {
+  getCategories(): Map<string, ICommand[]> {
     return this.categories;
   }
 
-  getCategoryCommands(category: string): Command[] {
+  getCategoryCommands(category: string): ICommand[] {
     return this.categories.get(category) || [];
   }
 
@@ -240,7 +135,7 @@ export class CommandHandler {
     return Array.from(this.commands.keys());
   }
 
-  getAllCommands(): Command[] {
+  getAllCommands(): ICommand[] {
     return Array.from(this.commands.values());
   }
 }

@@ -1,29 +1,43 @@
-import { ChatInputCommandInteraction } from "discord.js";
-import { Command } from "../../types";
+import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import { ICommand } from "../../types/Command";
 import { Embeds } from "../../utils/embeds";
 
-export default {
+export const command: ICommand = {
   name: "eval",
   description: "Evaluate JavaScript code (Owner only)",
   category: "admin",
   ownerOnly: true,
   slashCommand: true,
   prefixCommand: true,
-  async run(interaction: ChatInputCommandInteraction) {
+
+  data: new SlashCommandBuilder()
+    .setName("eval")
+    .setDescription("Evaluate JavaScript code (Owner only)")
+    .addStringOption((option) =>
+      option
+        .setName("code")
+        .setDescription("JavaScript code to evaluate")
+        .setRequired(true),
+    ),
+
+  async run(interaction?: ChatInputCommandInteraction) {
+    if (!interaction) return;
+
     // Check if user is bot owner
     const client = interaction.client;
     const ownerId = client.application?.owner?.id || process.env.OWNER_ID;
 
     if (!ownerId) {
-      return await interaction.reply({
+      await interaction.reply({
         embeds: [
           Embeds.error(
             "Configuration Error",
             "Bot owner ID not found. Please set OWNER_ID in environment variables.",
           ),
         ],
-        flags: [64],
+        ephemeral: true,
       });
+      return;
     }
 
     // For teams, owner might be a Team object
@@ -46,15 +60,16 @@ export default {
     }
 
     if (!isOwner) {
-      return await interaction.reply({
+      await interaction.reply({
         embeds: [
           Embeds.error(
             "Permission Denied",
             "Only the bot owner can use this command.",
           ),
         ],
-        flags: [64],
+        ephemeral: true,
       });
+      return;
     }
 
     const code = interaction.options.getString("code", true);
@@ -83,8 +98,8 @@ export default {
             `\`\`\`js\n${error.message || error}\n\`\`\``,
           ),
         ],
-        flags: [64],
+        ephemeral: true,
       });
     }
   },
-} as Command;
+};

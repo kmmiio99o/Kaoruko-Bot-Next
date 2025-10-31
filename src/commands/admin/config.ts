@@ -257,6 +257,57 @@ export const command: ICommand = {
           subcommand
             .setName("status")
             .setDescription("View ticket system status"),
+        )
+        .addSubcommand((subcommand) =>
+          subcommand
+            .setName("categories")
+            .setDescription("Manage ticket categories")
+            .addStringOption((option) =>
+              option
+                .setName("action")
+                .setDescription("Action to perform")
+                .setRequired(true)
+                .addChoices(
+                  { name: "Add Category", value: "add" },
+                  { name: "Remove Category", value: "remove" },
+                  { name: "Edit Category", value: "edit" },
+                  { name: "List Categories", value: "list" },
+                ),
+            )
+            .addStringOption((option) =>
+              option
+                .setName("category-id")
+                .setDescription("Category ID (for remove/edit operations)")
+                .setRequired(false),
+            )
+            .addStringOption((option) =>
+              option
+                .setName("name")
+                .setDescription("Category name")
+                .setMaxLength(50)
+                .setRequired(false),
+            )
+            .addStringOption((option) =>
+              option
+                .setName("description")
+                .setDescription("Category description")
+                .setMaxLength(200)
+                .setRequired(false),
+            )
+            .addStringOption((option) =>
+              option
+                .setName("emoji")
+                .setDescription("Category emoji")
+                .setMaxLength(10)
+                .setRequired(false),
+            )
+            .addStringOption((option) =>
+              option
+                .setName("color")
+                .setDescription("Category color (hex code, e.g. #5865F2)")
+                .setMaxLength(7)
+                .setRequired(false),
+            ),
         ),
     )
     .addSubcommand((subcommand) =>
@@ -318,7 +369,7 @@ export const command: ICommand = {
     }
 
     try {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ flags: 64 });
 
       // Check permissions
       const member = interaction.member as any;
@@ -379,7 +430,7 @@ export const command: ICommand = {
         }
       }
     } catch (error) {
-      Logger.error("Error in config command:", error);
+      Logger.error("Error in config command:" + ": " + error);
 
       const errorEmbed = Embeds.error(
         "Configuration Error",
@@ -389,11 +440,312 @@ export const command: ICommand = {
       if (interaction.deferred) {
         await interaction.editReply({ embeds: [errorEmbed] });
       } else {
-        await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        await interaction.reply({ embeds: [errorEmbed], flags: 64 });
       }
     }
   },
 };
+
+async function handleTicketCategories(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  const action = interaction.options.getString("action", true);
+  const categoryId = interaction.options.getString("category-id");
+  const name = interaction.options.getString("name");
+  const description = interaction.options.getString("description");
+  const emoji = interaction.options.getString("emoji");
+  const color = interaction.options.getString("color");
+
+  let ticketConfig = await TicketConfig.findByGuild(interaction.guild!.id);
+
+  if (!ticketConfig) {
+    ticketConfig = await TicketConfig.createDefault(interaction.guild!.id);
+  }
+
+  switch (action) {
+    case "add":
+      await handleAddCategory(
+        interaction,
+        ticketConfig,
+        name,
+        description,
+        emoji,
+        color,
+      );
+      break;
+    case "remove":
+      await handleRemoveCategory(interaction, ticketConfig, categoryId);
+      break;
+    case "list":
+      await handleListCategories(interaction, ticketConfig);
+      break;
+    case "edit":
+      await handleEditCategory(
+        interaction,
+        ticketConfig,
+        categoryId,
+        name,
+        description,
+        emoji,
+        color,
+      );
+      break;
+    default:
+      await interaction.editReply({
+        embeds: [
+          Embeds.error("Invalid Action", "Please select a valid action."),
+        ],
+      });
+  }
+}
+
+async function handleAddCategory(
+  interaction: ChatInputCommandInteraction,
+  config: any,
+  name: string | null,
+  description: string | null,
+  emoji: string | null,
+  color: string | null,
+): Promise<void> {
+  if (!name) {
+    await interaction.editReply({
+      embeds: [
+        Embeds.error("Missing Name", "Please provide a name for the category."),
+      ],
+    });
+    return;
+  }
+
+  const categoryId = name
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_]/g, "");
+
+  if (config.categories.has(categoryId)) {
+    await interaction.editReply({
+      embeds: [
+        Embeds.error(
+          "Category Exists",
+          "A category with this name already exists.",
+        ),
+      ],
+    });
+    return;
+  }
+
+  const categoryData = {
+    name: name,
+    description: description || "No description provided",
+    emoji: emoji || "🎫",
+    color: color || "#5865F2",
+    autoAssignRoles: [],
+    requiredRoles: [],
+  };
+
+  config.categories.set(categoryId, categoryData);
+  await config.save();
+
+  const embed = new EmbedBuilder()
+    .setTitle("✅ Category Added")
+    .setDescription(`Category **${name}** has been added successfully!`)
+    .addFields(
+      { name: "Category ID", value: categoryId, inline: true },
+      { name: "Name", value: name, inline: true },
+      { name: "Emoji", value: emoji || "🎫", inline: true },
+      {
+        name: "Description",
+        value: description || "No description provided",
+        inline: false,
+      },
+    )
+    .setColor("#00FF00")
+    .setTimestamp();
+
+  await interaction.editReply({ embeds: [embed] });
+}
+
+async function handleRemoveCategory(
+  interaction: ChatInputCommandInteraction,
+  config: any,
+  categoryId: string | null,
+): Promise<void> {
+  if (!categoryId) {
+    await interaction.editReply({
+      embeds: [
+        Embeds.error(
+          "Missing Category ID",
+          "Please provide the category ID to remove.",
+        ),
+      ],
+    });
+    return;
+  }
+
+  if (!config.categories.has(categoryId)) {
+    await interaction.editReply({
+      embeds: [
+        Embeds.error(
+          "Category Not Found",
+          "The specified category does not exist.",
+        ),
+      ],
+    });
+    return;
+  }
+
+  const categoryData = config.categories.get(categoryId);
+  config.categories.delete(categoryId);
+
+  if (config.defaultCategory === categoryId && config.categories.size > 0) {
+    config.defaultCategory = Array.from(config.categories.keys())[0];
+  }
+
+  await config.save();
+
+  const embed = new EmbedBuilder()
+    .setTitle("🗑️ Category Removed")
+    .setDescription(
+      `Category **${categoryData.name}** has been removed successfully!`,
+    )
+    .addFields(
+      { name: "Removed Category", value: categoryId, inline: true },
+      {
+        name: "Remaining Categories",
+        value: config.categories.size.toString(),
+        inline: true,
+      },
+    )
+    .setColor("#FF6B35")
+    .setTimestamp();
+
+  await interaction.editReply({ embeds: [embed] });
+}
+
+async function handleListCategories(
+  interaction: ChatInputCommandInteraction,
+  config: any,
+): Promise<void> {
+  if (config.categories.size === 0) {
+    await interaction.editReply({
+      embeds: [
+        Embeds.error(
+          "No Categories",
+          "No ticket categories have been configured.",
+        ),
+      ],
+    });
+    return;
+  }
+
+  const embed = new EmbedBuilder()
+    .setTitle("🎫 Ticket Categories")
+    .setDescription(
+      `Here are all the configured ticket categories (${config.categories.size} total):`,
+    )
+    .setColor("#5865F2")
+    .setTimestamp();
+
+  for (const [categoryId, categoryData] of config.categories) {
+    const isDefault = config.defaultCategory === categoryId ? " ⭐" : "";
+    embed.addFields({
+      name: `${categoryData.emoji} ${categoryData.name}${isDefault}`,
+      value: `**ID:** ${categoryId}\n**Description:** ${categoryData.description}\n**Color:** ${categoryData.color}`,
+      inline: true,
+    });
+  }
+
+  embed.setFooter({
+    text: "⭐ indicates the default category",
+  });
+
+  await interaction.editReply({ embeds: [embed] });
+}
+
+async function handleEditCategory(
+  interaction: ChatInputCommandInteraction,
+  config: any,
+  categoryId: string | null,
+  name: string | null,
+  description: string | null,
+  emoji: string | null,
+  color: string | null,
+): Promise<void> {
+  if (!categoryId) {
+    await interaction.editReply({
+      embeds: [
+        Embeds.error(
+          "Missing Category ID",
+          "Please provide the category ID to edit.",
+        ),
+      ],
+    });
+    return;
+  }
+
+  if (!config.categories.has(categoryId)) {
+    await interaction.editReply({
+      embeds: [
+        Embeds.error(
+          "Category Not Found",
+          "The specified category does not exist.",
+        ),
+      ],
+    });
+    return;
+  }
+
+  const categoryData = config.categories.get(categoryId);
+  let updated = false;
+  const changes: string[] = [];
+
+  if (name && name !== categoryData.name) {
+    categoryData.name = name;
+    updated = true;
+    changes.push(`Name: ${name}`);
+  }
+
+  if (description && description !== categoryData.description) {
+    categoryData.description = description;
+    updated = true;
+    changes.push(`Description: ${description}`);
+  }
+
+  if (emoji && emoji !== categoryData.emoji) {
+    categoryData.emoji = emoji;
+    updated = true;
+    changes.push(`Emoji: ${emoji}`);
+  }
+
+  if (color && color !== categoryData.color) {
+    categoryData.color = color;
+    updated = true;
+    changes.push(`Color: ${color}`);
+  }
+
+  if (!updated) {
+    await interaction.editReply({
+      embeds: [Embeds.error("No Changes", "No valid changes were provided.")],
+    });
+    return;
+  }
+
+  config.categories.set(categoryId, categoryData);
+  await config.save();
+
+  const embed = new EmbedBuilder()
+    .setTitle("✏️ Category Updated")
+    .setDescription(
+      `Category **${categoryData.name}** has been updated successfully!`,
+    )
+    .addFields(
+      { name: "Category ID", value: categoryId, inline: true },
+      { name: "Changes Made", value: changes.join("\n"), inline: false },
+    )
+    .setColor("#FFA500")
+    .setTimestamp();
+
+  await interaction.editReply({ embeds: [embed] });
+}
 
 async function handleGeneralConfig(
   interaction: ChatInputCommandInteraction,
@@ -896,6 +1248,9 @@ async function handleTicketsConfig(
   subcommand: string,
 ) {
   switch (subcommand) {
+    case "categories":
+      await handleTicketCategories(interaction);
+      break;
     case "quick-setup":
       const category = interaction.options.getChannel("category");
       const logsChannel = interaction.options.getChannel("logs");
@@ -1445,7 +1800,7 @@ async function handleExport(
       ],
     });
   } catch (error) {
-    Logger.error("Error exporting configuration:", error);
+    Logger.error("Error exporting configuration:" + ": " + error);
     await interaction.editReply({
       embeds: [
         Embeds.error(
@@ -1599,7 +1954,7 @@ async function handleImport(
 
     await interaction.editReply({ embeds: [importEmbed] });
   } catch (error) {
-    Logger.error("Error importing configuration:", error);
+    Logger.error("Error importing configuration:" + ": " + error);
     await interaction.editReply({
       embeds: [
         Embeds.error(

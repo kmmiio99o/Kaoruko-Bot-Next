@@ -173,7 +173,7 @@ const TicketConfigSchema = new Schema({
   dmUserOnClose: { type: Boolean, default: true },
   requireReason: { type: Boolean, default: false },
   allowUserClose: { type: Boolean, default: true },
-  mentionSupportOnCreate: { type: Boolean, default: true },
+  mentionSupportOnCreate: { type: Boolean, default: false },
 
   // Categories
   categories: {

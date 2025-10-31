@@ -41,6 +41,15 @@ export enum TicketCategory {
   OTHER = "other",
 }
 
+export type ValidTicketCategory =
+  | "general"
+  | "technical"
+  | "billing"
+  | "moderation"
+  | "partnership"
+  | "report"
+  | "other";
+
 export interface ITicket extends Document {
   guildId: string;
   ticketId: string;
@@ -48,7 +57,7 @@ export interface ITicket extends Document {
   authorId: string;
   authorName: string;
   subject: string;
-  category: TicketCategory;
+  category: string;
   priority: TicketPriority;
   status: TicketStatus;
   description?: string;
@@ -108,7 +117,6 @@ const TicketSchema = new Schema({
   subject: { type: String, required: true, maxlength: 100 },
   category: {
     type: String,
-    enum: Object.values(TicketCategory),
     default: TicketCategory.GENERAL,
   },
   priority: {

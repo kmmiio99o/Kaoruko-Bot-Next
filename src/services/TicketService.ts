@@ -18,7 +18,6 @@ import {
 import Ticket, {
   ITicket,
   TicketStatus,
-  TicketCategory,
   TicketPriority,
 } from "../models/Ticket";
 import TicketConfig, { ITicketConfig } from "../models/TicketConfig";
@@ -41,7 +40,7 @@ export class TicketService {
   async createTicket(
     guild: Guild,
     user: User,
-    category: TicketCategory = TicketCategory.GENERAL,
+    category: string = "general",
     subject?: string,
     description?: string,
   ): Promise<{ ticket: ITicket; channel: TextChannel } | null> {
@@ -161,6 +160,21 @@ export class TicketService {
         ],
       });
 
+      // Log chosen category and available categories for debugging
+      try {
+        const availableCategories =
+          config && config.categories
+            ? Array.from(config.categories.keys()).join(", ")
+            : "none";
+        Logger.info(
+          `Ticket creation: chosenCategory=${category} | availableCategories=${availableCategories} | guild=${guild.id} | user=${user.id}`,
+        );
+      } catch (logErr) {
+        Logger.warn(
+          `Failed to enumerate ticket categories for guild ${guild.id}: ${logErr}`,
+        );
+      }
+
       await ticket.save();
 
       // Send welcome message
@@ -177,15 +191,7 @@ export class TicketService {
         );
       }
 
-      // Mention support roles if enabled
-      if (config.mentionSupportOnCreate) {
-        const mentions = config.supportRoles
-          .map((roleId) => `<@&${roleId}>`)
-          .join(" ");
-        if (mentions) {
-          await channel.send(`${mentions} New ticket created!`);
-        }
-      }
+      // Mentions are already handled inside sendWelcomeMessage; avoid duplicate pings here.
 
       Logger.info(
         `Ticket ${ticketId} created in guild ${guild.id} by user ${user.id}`,
@@ -712,8 +718,8 @@ export class TicketService {
     let mentionContent = "";
     if (config.mentionSupportOnCreate) {
       const rolesToMention = new Set<string>();
+      // Only mention support roles, not admin roles
       config.supportRoles.forEach((roleId) => rolesToMention.add(roleId));
-      config.adminRoles.forEach((roleId) => rolesToMention.add(roleId));
 
       if (rolesToMention.size > 0) {
         mentionContent = Array.from(rolesToMention)

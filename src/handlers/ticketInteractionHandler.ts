@@ -356,6 +356,10 @@ export class TicketInteractionHandler {
   ): Promise<void> {
     const ticketId = customId.replace("confirm_close_", "");
 
+    // Immediately acknowledge the interaction to avoid "This interaction failed"
+    // We use deferReply so we can later call editReply/followUp.
+    await interaction.deferReply({ flags: 64 });
+
     // Find the ticket by ID
     const ticket = await Ticket.findOne({
       ticketId,
@@ -363,14 +367,12 @@ export class TicketInteractionHandler {
     });
 
     if (!ticket) {
-      await interaction.reply({
+      // We already deferred, so edit the reply instead of replying.
+      await interaction.editReply({
         embeds: [Embeds.error("Error", "Could not find the ticket to close.")],
-        flags: 64,
       });
       return;
     }
-
-    await interaction.deferReply({ flags: 64 });
 
     const success = await this.ticketService.closeTicket(
       interaction.guild!,
@@ -534,20 +536,21 @@ export class TicketInteractionHandler {
   ): Promise<void> {
     const ticketId = customId.replace("confirm_delete_", "");
 
+    // Immediately acknowledge the interaction to avoid "This interaction failed"
+    await interaction.deferReply({ flags: 64 });
+
     const ticket = await Ticket.findOne({
       ticketId,
       guildId: interaction.guild!.id,
     });
 
     if (!ticket) {
-      await interaction.reply({
+      // Already deferred; edit the reply to show the error
+      await interaction.editReply({
         embeds: [Embeds.error("Error", "Could not find the ticket to delete.")],
-        flags: 64,
       });
       return;
     }
-
-    await interaction.deferReply({ flags: 64 });
 
     try {
       const channel = interaction.guild!.channels.cache.get(ticket.channelId);

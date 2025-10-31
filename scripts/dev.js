@@ -1,9 +1,11 @@
+#!/usr/bin/env node
+
 // Kaoruko Bot Development Script
 console.log(
   "\x1b[36m╔══════════════════════════════════════════════════════════════════════════════════════════════════╗",
 );
 console.log(
-  "\x1b[36m║                                    KAORUKO BOT DEVELOPMENT                                       ║",
+  "\x1b[36m║                                      KAORUKO BOT DEVELOPMENT                                     ║",
 );
 console.log(
   "\x1b[36m╠══════════════════════════════════════════════════════════════════════════════════════════════════╣",
@@ -13,6 +15,9 @@ console.log(
 );
 console.log(
   "\x1b[36m║                              🌐 Built-in Web Dashboard Included 🌐                              ║",
+);
+console.log(
+  "\x1b[36m║                                  ⚡ Powered by Bun ⚡                                           ║",
 );
 console.log(
   "\x1b[36m╚══════════════════════════════════════════════════════════════════════════════════════════════════╝\x1b[0m",
@@ -49,286 +54,223 @@ function log(message, type = "info") {
   );
 }
 
-// Clean dist folder
-log("🧹 Cleaning build directory...", "info");
-
-if (fs.existsSync("./dist")) {
-  try {
-    fs.rmSync("./dist", { recursive: true, force: true });
-    log("✅ Clean completed successfully", "success");
-  } catch (error) {
-    log(`❌ Failed to clean dist directory: ${error.message}`, "error");
-  }
-} else {
-  log("✅ No dist directory to clean", "success");
-}
-
-// Check TypeScript configuration
-log("🔍 Checking TypeScript configuration...", "info");
-if (!fs.existsSync("./tsconfig.json")) {
-  log("⚠️  tsconfig.json not found! Creating default configuration...", "warn");
-
-  const defaultTsConfig = {
-    compilerOptions: {
-      target: "ES2022",
-      module: "commonjs",
-      lib: ["ES2022"],
-      outDir: "./dist",
-      rootDir: "./src",
-      strict: true,
-      esModuleInterop: true,
-      skipLibCheck: true,
-      forceConsistentCasingInFileNames: true,
-      resolveJsonModule: true,
-      declaration: true,
-      declarationMap: true,
-      sourceMap: true,
-      experimentalDecorators: true,
-      emitDecoratorMetadata: true,
-      allowSyntheticDefaultImports: true,
-      moduleResolution: "node",
-    },
-    include: ["src/**/*"],
-    exclude: ["node_modules", "dist"],
-  };
-
-  try {
-    fs.writeFileSync(
-      "./tsconfig.json",
-      JSON.stringify(defaultTsConfig, null, 2),
-    );
-    log("✅ Created default tsconfig.json", "success");
-  } catch (error) {
-    log(`❌ Failed to create tsconfig.json: ${error.message}`, "error");
-  }
-}
-
-// Check source directory
-log("📂 Checking source directory...", "info");
-if (!fs.existsSync("./src")) {
-  log("❌ Source directory (src/) not found!", "error");
-  log("💡 Please create the src/ directory with your TypeScript files", "info");
-  process.exit(1);
-}
-
-// Count source files
-function countSourceFiles(dir) {
-  if (!fs.existsSync(dir)) return 0;
-
-  let count = 0;
-  const files = fs.readdirSync(dir, { withFileTypes: true });
-
-  for (const file of files) {
-    const fullPath = path.join(dir, file.name);
-    if (file.isDirectory()) {
-      count += countSourceFiles(fullPath);
-    } else if (
-      file.isFile() &&
-      (file.name.endsWith(".ts") || file.name.endsWith(".tsx"))
-    ) {
-      count++;
-    }
-  }
-
-  return count;
-}
-
-const sourceFileCount = countSourceFiles("./src");
-log(`📄 Found ${sourceFileCount} TypeScript source files`, "info");
-
-if (sourceFileCount === 0) {
-  log("⚠️  No TypeScript files found in src/ directory!", "warn");
-  log("💡 Make sure your .ts files are in the src/ directory", "info");
-}
-
-// Compile TypeScript with enhanced error handling
-log("🚀 Starting TypeScript compilation...", "info");
-log("⏳ This may take a moment depending on the number of files...", "debug");
-
-const compile = exec("tsc", { cwd: process.cwd() });
-
-let stdoutOutput = "";
-let stderrOutput = "";
-
-compile.stdout.on("data", (data) => {
-  stdoutOutput += data;
-  // Show progress dots but limit output
-  if (stdoutOutput.length < 1000) {
-    process.stdout.write("\x1b[36m.\x1b[0m");
-  }
-});
-
-compile.stderr.on("data", (data) => {
-  stderrOutput += data;
-  // Show error dots but limit output
-  if (stderrOutput.length < 1000) {
-    process.stdout.write("\x1b[31m.\x1b[0m");
-  }
-});
-
-compile.on("close", (code) => {
-  console.log(""); // New line after dots
-
-  if (code === 0) {
-    log("✅ TypeScript compilation completed successfully!", "success");
-
-    // Count compiled files
-    function countCompiledFiles(dir) {
-      if (!fs.existsSync(dir)) return 0;
-
-      let count = 0;
-      const files = fs.readdirSync(dir, { withFileTypes: true });
-
-      for (const file of files) {
-        const fullPath = path.join(dir, file.name);
-        if (file.isDirectory()) {
-          count += countCompiledFiles(fullPath);
-        } else if (file.isFile() && file.name.endsWith(".js")) {
-          count++;
-        }
-      }
-
-      return count;
-    }
-
-    const compiledFileCount = fs.existsSync("./dist")
-      ? countCompiledFiles("./dist")
-      : 0;
-    log(
-      `📁 Compiled ${compiledFileCount} JavaScript files to dist/`,
-      "success",
-    );
-    log(`📦 Build output: dist/ (${compiledFileCount} files)`, "info");
-
-    console.log(
-      "\n\x1b[32m╔══════════════════════════════════════════════════════════════════════════════════════════════════════╗",
-    );
-    console.log(
-      "\x1b[32m║                                    START COMPLETED SUCCESSFULLY                                      ║",
-    );
-    console.log(
-      "\x1b[32m║                              🌐 Dashboard: http://localhost:3000 🌐                              ║",
-    );
-    console.log(
-      "\x1b[32m╚══════════════════════════════════════════════════════════════════════════════════════════════════════╝\x1b[0m",
-    );
-
-    // Start the bot
-    log("🚀 Starting bot in development mode...", "info");
-    log("🌐 Web dashboard will be available at http://localhost:3000", "info");
-    log("📊 Dashboard features: Real-time stats, server management, logs, settings", "debug");
-    log("🔐 Dashboard uses basic auth token (check .env DASHBOARD_TOKEN)", "debug");
-    log("🔄 Auto-restart enabled", "debug");
-    log("⌨️  Press Ctrl+C to stop", "debug");
-    console.log("");
-
-    // Start the bot process
-    const botProcess = exec("node dist/index.js", {
-      stdio: ["pipe", "pipe", "pipe"],
-      shell: true,
-    });
-
-    botProcess.stdout.on("data", (data) => {
-      const output = data.toString();
-      if (output.includes("[SUCCESS]")) {
-        console.log("\x1b[32m" + output.trim() + "\x1b[0m");
-      } else if (output.includes("[ERROR]")) {
-        console.log("\x1b[31m" + output.trim() + "\x1b[0m");
-      } else if (output.includes("[WARN]")) {
-        console.log("\x1b[33m" + output.trim() + "\x1b[0m");
-      } else if (output.includes("[INFO]")) {
-        console.log("\x1b[36m" + output.trim() + "\x1b[0m");
-      } else if (output.includes("Dashboard dostępny")) {
-        console.log("\x1b[35m🌐 " + output.trim() + "\x1b[0m");
-      } else if (output.includes("Serwer webowy")) {
-        console.log("\x1b[35m🌐 " + output.trim() + "\x1b[0m");
-      } else {
-        console.log("\x1b[37m" + output.trim() + "\x1b[0m");
-      }
-    });
-
-    botProcess.stderr.on("data", (data) => {
-      console.log("\x1b[31mSTDERR: " + data.toString().trim() + "\x1b[0m");
-    });
-
-    botProcess.on("close", (code) => {
-      log(`🤖 Bot process exited with code ${code}`, "info");
-    });
-
-    // Handle Ctrl+C gracefully
-    process.on("SIGINT", () => {
-      log("🛑 Shutting down bot...", "warn");
-      botProcess.kill("SIGTERM");
-
-      setTimeout(() => {
-        log("💀 Force killing bot process...", "error");
-        botProcess.kill("SIGKILL");
-        process.exit(0);
-      }, 5000);
-    });
-  } else {
-    log(`❌ Build failed with exit code ${code}`, "error");
-
-    // Show detailed error output
-    if (stdoutOutput.trim()) {
-      log("📄 STDOUT output:", "debug");
-      console.log("\x1b[36m" + stdoutOutput.trim() + "\x1b[0m");
-    }
-
-    if (stderrOutput.trim()) {
-      log("📄 STDERR output:", "error");
-      console.log("\x1b[31m" + stderrOutput.trim() + "\x1b[0m");
-    }
-
-    // Parse TypeScript errors for better readability
-    if (stderrOutput.includes("error TS")) {
-      log("🔥 TypeScript Compilation Errors:", "error");
-
-      const errorLines = stderrOutput.split("\n");
-      let errorCount = 0;
-
-      errorLines.forEach((line) => {
-        if (line.includes("error TS") && errorCount < 10) {
-          // Limit to 10 errors
-          // Extract error code and message
-          const errorCodeMatch = line.match(/error (TS\d+): (.*)/);
-          if (errorCodeMatch) {
-            const [, errorCode, errorMessage] = errorCodeMatch;
-            log(`[${errorCode}] ${errorMessage}`, "error");
-            errorCount++;
-          } else {
-            log(line, "error");
-            errorCount++;
-          }
-        }
-      });
-
-      if (errorCount >= 10) {
-        log(
-          `... and ${errorLines.filter((l) => l.includes("error TS")).length - 10} more errors`,
-          "warn",
-        );
-      }
-    }
-
-    console.log(
-      "\n\x1b[31m╔══════════════════════════════════════════════════════════════════════════════════════════════════════╗",
-    );
-    console.log(
-      "\x1b[31m║                                           BUILD FAILED                                             ║",
-    );
-    console.log(
-      "\x1b[31m║                              🌐 Dashboard will not be available 🌐                              ║",
-    );
-    console.log(
-      "\x1b[31m╚══════════════════════════════════════════════════════════════════════════════════════════════════════╝\x1b[0m",
-    );
-
+// Check if bun is available
+log("🔍 Checking bun installation...", "info");
+exec("bun --version", (error, stdout) => {
+  if (error) {
+    log("❌ Bun is not installed or not available in PATH", "error");
+    log("💡 Please install bun from https://bun.sh", "info");
     process.exit(1);
   }
+  log(`⚡ Using bun version: ${stdout.trim()}`, "success");
+  startDevelopment();
 });
 
-compile.on("error", (error) => {
-  log(`❌ Failed to start TypeScript compiler: ${error.message}`, "error");
-  process.exit(1);
-});
+function startDevelopment() {
+  // Clean dist folder
+  log("🧹 Cleaning build directory...", "info");
+
+  if (fs.existsSync("./dist")) {
+    try {
+      fs.rmSync("./dist", { recursive: true, force: true });
+      log("✅ Clean completed successfully", "success");
+    } catch (error) {
+      log(`❌ Failed to clean dist directory: ${error.message}`, "error");
+    }
+  } else {
+    log("✅ No dist directory to clean", "success");
+  }
+
+  // Check TypeScript configuration
+  log("🔍 Checking TypeScript configuration...", "info");
+  if (!fs.existsSync("./tsconfig.json")) {
+    log(
+      "⚠️  tsconfig.json not found! Creating default configuration...",
+      "warn",
+    );
+
+    const defaultTsConfig = {
+      compilerOptions: {
+        target: "ES2022",
+        module: "ESNext",
+        moduleResolution: "bundler",
+        lib: ["ES2022"],
+        outDir: "./dist",
+        rootDir: "./src",
+        strict: true,
+        esModuleInterop: true,
+        allowSyntheticDefaultImports: true,
+        skipLibCheck: true,
+        forceConsistentCasingInFileNames: true,
+        resolveJsonModule: true,
+        declaration: true,
+        declarationMap: true,
+        sourceMap: true,
+        experimentalDecorators: true,
+        emitDecoratorMetadata: true,
+        types: ["bun-types"],
+        allowImportingTsExtensions: false,
+      },
+      include: ["src/**/*"],
+      exclude: ["node_modules", "dist"],
+    };
+
+    try {
+      fs.writeFileSync(
+        "./tsconfig.json",
+        JSON.stringify(defaultTsConfig, null, 2),
+      );
+      log("✅ Created default tsconfig.json", "success");
+    } catch (error) {
+      log(`❌ Failed to create tsconfig.json: ${error.message}`, "error");
+    }
+  }
+
+  // Check source directory
+  log("📂 Checking source directory...", "info");
+  if (!fs.existsSync("./src")) {
+    log("❌ Source directory (src/) not found!", "error");
+    log(
+      "💡 Please create the src/ directory with your TypeScript files",
+      "info",
+    );
+    process.exit(1);
+  }
+
+  // Count source files
+  function countSourceFiles(dir) {
+    if (!fs.existsSync(dir)) return 0;
+
+    let count = 0;
+    const files = fs.readdirSync(dir, { withFileTypes: true });
+
+    for (const file of files) {
+      const fullPath = path.join(dir, file.name);
+      if (file.isDirectory()) {
+        count += countSourceFiles(fullPath);
+      } else if (
+        file.isFile() &&
+        (file.name.endsWith(".ts") || file.name.endsWith(".tsx"))
+      ) {
+        count++;
+      }
+    }
+
+    return count;
+  }
+
+  const sourceFileCount = countSourceFiles("./src");
+  log(`📄 Found ${sourceFileCount} TypeScript source files`, "info");
+
+  if (sourceFileCount === 0) {
+    log("⚠️  No TypeScript files found in src/ directory!", "warn");
+    log("💡 Make sure your .ts files are in the src/ directory", "info");
+  }
+
+  // Use bun's built-in watch mode for development
+  log("🚀 Starting bot in development mode with bun...", "info");
+  log("⚡ Using bun's built-in hot reloading", "success");
+  log("🌐 Web dashboard will be available at http://localhost:3000", "info");
+  log(
+    "📊 Dashboard features: Real-time stats, server management, logs, settings",
+    "debug",
+  );
+  log(
+    "🔐 Dashboard uses basic auth token (check .env DASHBOARD_TOKEN)",
+    "debug",
+  );
+  log("🔄 Auto-restart enabled", "debug");
+  log("⌨️  Press Ctrl+C to stop", "debug");
+  console.log("");
+
+  console.log(
+    "\n\x1b[32m╔══════════════════════════════════════════════════════════════════════════════════════════════════════╗",
+  );
+  console.log(
+    "\x1b[32m║                                    DEVELOPMENT MODE READY                                           ║",
+  );
+  console.log(
+    "\x1b[32m║                              🌐 Dashboard: http://localhost:3000 🌐                              ║",
+  );
+  console.log(
+    "\x1b[32m║                                  ⚡ Hot Reload Enabled ⚡                                        ║",
+  );
+  console.log(
+    "\x1b[32m╚══════════════════════════════════════════════════════════════════════════════════════════════════════╝\x1b[0m",
+  );
+
+  // Start the bot process with bun's watch mode
+  const botProcess = exec("bun --watch src/index.ts", {
+    stdio: ["pipe", "pipe", "pipe"],
+    shell: true,
+    env: { ...process.env, NODE_ENV: "development" },
+  });
+
+  botProcess.stdout.on("data", (data) => {
+    const output = data.toString();
+    if (output.includes("[SUCCESS]")) {
+      console.log("\x1b[32m" + output.trim() + "\x1b[0m");
+    } else if (output.includes("[ERROR]")) {
+      console.log("\x1b[31m" + output.trim() + "\x1b[0m");
+    } else if (output.includes("[WARN]")) {
+      console.log("\x1b[33m" + output.trim() + "\x1b[0m");
+    } else if (output.includes("[INFO]")) {
+      console.log("\x1b[36m" + output.trim() + "\x1b[0m");
+    } else if (
+      output.includes("Dashboard dostępny") ||
+      output.includes("dashboard")
+    ) {
+      console.log("\x1b[35m🌐 " + output.trim() + "\x1b[0m");
+    } else if (
+      output.includes("Serwer webowy") ||
+      output.includes("web server")
+    ) {
+      console.log("\x1b[35m🌐 " + output.trim() + "\x1b[0m");
+    } else if (
+      output.includes("restarting") ||
+      output.includes("File change detected")
+    ) {
+      console.log("\x1b[35m🔄 " + output.trim() + "\x1b[0m");
+    } else {
+      console.log("\x1b[37m" + output.trim() + "\x1b[0m");
+    }
+  });
+
+  botProcess.stderr.on("data", (data) => {
+    const error = data.toString();
+    // Filter out bun's development warnings that aren't critical
+    if (!error.includes("warn:") && !error.includes("ExperimentalWarning")) {
+      console.log("\x1b[31mERROR: " + error.trim() + "\x1b[0m");
+    }
+  });
+
+  botProcess.on("close", (code) => {
+    if (code === 0) {
+      log("🤖 Bot process exited normally", "info");
+    } else {
+      log(`🤖 Bot process exited with code ${code}`, "warn");
+    }
+  });
+
+  botProcess.on("error", (error) => {
+    log(`❌ Failed to start bot process: ${error.message}`, "error");
+  });
+
+  // Handle Ctrl+C gracefully
+  process.on("SIGINT", () => {
+    log("🛑 Shutting down bot...", "warn");
+    botProcess.kill("SIGTERM");
+
+    setTimeout(() => {
+      log("💀 Force killing bot process...", "error");
+      botProcess.kill("SIGKILL");
+      process.exit(0);
+    }, 5000);
+  });
+
+  process.on("SIGTERM", () => {
+    log("🛑 Received SIGTERM, shutting down...", "warn");
+    botProcess.kill("SIGTERM");
+    process.exit(0);
+  });
+}

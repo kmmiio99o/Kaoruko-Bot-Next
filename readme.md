@@ -1,184 +1,355 @@
-# Kaoruko Bot
+# 🎭 Kaoruko Bot Next
 
-A feature-rich Discord bot built with TypeScript and discord.js, offering comprehensive moderation tools, entertainment features, and utility commands with robust error handling and database integration.
+**A modern, feature-rich Discord bot built with TypeScript, Bun, and discord.js**
 
-## KEY FEATURES
+Kaoruko Bot Next is a comprehensive Discord bot offering advanced moderation tools, a complete ticket support system, entertainment features, and extensive configuration options. Built with modern technologies and best practices for optimal performance and reliability.
 
--   **Dual Command System**: Supports both slash commands and traditional prefix commands
--   **Advanced Event Handling**: Comprehensive event management for Discord interactions
--   **Robust Error Handling**: Webhook logging for unhandled rejections and exceptions
--   **Database Integration**: MongoDB with Mongoose for persistent data storage
--   **Extensible Architecture**: Easy to add new commands and functionality
--   **Owner-Only Utilities**: Secure evaluation and testing commands
+## ✨ Key Features
 
-## COMMAND CATEGORIES
+### 🚀 Modern Technology Stack
+- **Bun Runtime**: Ultra-fast JavaScript runtime with built-in bundler and package manager
+- **TypeScript**: Full type safety and modern JavaScript features
+- **discord.js v14**: Latest Discord API implementation
+- **MongoDB + Mongoose**: Robust database integration with schema validation
+- **Hot Reload**: Development mode with automatic restarts on file changes
 
-### ADMINISTRATION
--   `eval` - Execute JavaScript code (Owner restricted)
+### 🎫 Advanced Ticket System
+- **Multi-Category Support**: Customizable ticket categories with different settings
+- **Interactive Panels**: Beautiful embed panels with category buttons
+- **Automated Workflows**: Auto-assignment, claiming, and escalation
+- **Transcript Generation**: Complete conversation history preservation
+- **Permission Management**: Role-based access control
+- **Auto-moderation**: Configurable auto-close and cleanup policies
 
-### ENTERTAINMENT
--   `8ball` - Consult the magic 8-ball for answers to your questions
+### ⚙️ Comprehensive Configuration
+- **Web Dashboard**: Built-in dashboard for easy management (coming soon)
+- **Database-driven Settings**: Per-guild configuration with export/import
+- **Command-based Setup**: Complete configuration through Discord commands
+- **Auto-moderation**: Spam detection, invite filtering, profanity filter
+- **Role Management**: Flexible permission system with multiple role types
 
-### INFORMATION
--   `help` - Display help information about available commands
+### 🛠️ Dual Command System
+- **Slash Commands**: Modern Discord interactions with autocomplete
+- **Prefix Commands**: Traditional command support for flexibility
+- **Hybrid Support**: Commands can work with both interaction types
 
-### MODERATION
--   `ban` - Remove a user from the server permanently
--   `kick` - Remove a user from the server
--   `timeout` - Restrict a user's ability to interact temporarily
+## 📦 Installation & Setup
 
-### UTILITY
--   `avatar` - Retrieve a user's avatar image
--   `endpoll` - Terminate a poll early and display results
--   `invite` - Generate a server invitation link
--   `ping` - Check bot latency and responsiveness
--   `poll` - Create interactive polls with multiple options
--   `serverinfo` - Display detailed server information
--   `testerror` - Command to verify error handling systems (Owner restricted)
--   `userinfo` - Display detailed user information
+### Prerequisites
+- **Bun**: Install from [bun.sh](https://bun.sh)
+- **MongoDB**: Database server (local or cloud)
+- **Discord Bot**: Create at [Discord Developer Portal](https://discord.com/developers/applications)
 
-## INSTALLATION & SETUP
+### Quick Start
 
-### PREREQUISITES
--   Node.js (v16 or higher)
--   MongoDB database
--   A Discord Developer account
+1. **Clone the Repository**
+   ```bash
+   git clone https://github.com/your-repo/kaoruko-bot-next.git
+   cd kaoruko-bot-next
+   ```
 
-### INSTALLATION STEPS
+2. **Install Dependencies**
+   ```bash
+   bun install
+   ```
 
-1.  **Clone the Repository**
-    ```bash
-    git clone https://github.com/kmmiio99o/kaoruko-rewrite.git
-    cd kaoruko-rewrite
-    ```
+3. **Environment Configuration**
+   Create a `.env` file:
+   ```env
+   DISCORD_TOKEN=your_bot_token_here
+   CLIENT_ID=your_bot_client_id_here
+   OWNER_ID=your_discord_user_id_here
+   MONGODB_URI=mongodb://localhost:27017/kaoruko
+   PREFIX=!
+   WEB_PORT=3000
+   WEBHOOK_URL=your_discord_webhook_url_for_logging
+   ```
 
-2.  **Install Dependencies**
-    ```bash
-    npm install
-    ```
+4. **Build and Start**
+   ```bash
+   # Development mode (with hot reload)
+   bun run dev
+   
+   # Production mode
+   bun run build
+   bun start
+   ```
 
-3.  **Environment Configuration**
-    Create a `.env` file in the root directory with the following variables:
-    ```env
-    TOKEN=your_discord_bot_token_here
-    CLIENT_ID=your_bot_client_id_here
-    MONGO_URI=your_mongodb_connection_string_here
-    OWNER_ID=your_discord_user_id_here
-    WEBHOOK_URL=your_discord_webhook_url_here
-    ```
+## 🎛️ Configuration Guide
 
-### CONFIGURATION DETAILS
+### Initial Bot Setup
 
--   **`TOKEN`**: Obtain from the [Discord Developer Portal](https://discord.com/developers/applications) under your application's 'Bot' section.
--   **`CLIENT_ID`**: Found in the Discord Developer Portal under 'General Information'.
--   **`MONGO_URI`**: Your MongoDB connection string (e.g., `mongodb://username:password@host:port/database`).
--   **`OWNER_ID`**: Your Discord user ID. Enable Developer Mode in Discord settings, then right-click your profile to copy your ID.
--   **`WEBHOOK_URL`**: A Discord webhook URL for error logging and monitoring.
+1. **Invite the Bot**
+   - Use the Discord Developer Portal to generate an invite link
+   - Required permissions: Administrator (for full functionality)
 
-## USAGE
+2. **Configure Server Settings**
+   ```
+   /config general prefix prefix:!
+   /config general channels welcome:#welcome goodbye:#goodbye modlog:#mod-logs
+   /config general logging commands:true errors:true events:true
+   ```
 
-### PRODUCTION DEPLOYMENT
-To build and start the bot for production:
-```bash
-npm run build
-npm run start
+3. **Setup Ticket System**
+   ```
+   /config tickets quick-setup category:Support Tickets logs:#ticket-logs support-role:@Support Team
+   /ticketpanel channel:#support
+   ```
+
+### Advanced Configuration
+
+#### Auto-Moderation Setup
+```
+/config moderation automod enabled:true delete-invites:true delete-spam:true profanity-filter:true max-warnings:3 spam-threshold:5
 ```
 
-### DEVELOPMENT MODE
-To run the bot in development mode with automatic restarts on file changes:
-```bash
-npm run dev
+#### Role Management
+```
+/config moderation roles type:admin action:add role:@Administrators
+/config moderation roles type:mod action:add role:@Moderators
 ```
 
-## DEVELOPMENT
-
-### PROJECT STRUCTURE
+#### Ticket Categories
 ```
-kaoruko-rewrite/
-├── .env                # Environment variables (ignored by git)
-├── .github/
-│   └── dependabot.yml  # Dependabot configuration
-├── scripts/
-│   ├── build.js        # Script for building the project
-│   └── dev.js          # Script for running in development mode
+/ticketconfig category action:add name:"Technical Support" description:"For technical issues" emoji:🔧 color:#FF6B35
+/ticketconfig category action:add name:"Billing Support" description:"For payment questions" emoji:💰 color:#4CAF50
+```
+
+## 📋 Command Categories
+
+### 🔧 Administration (`/config`)
+- **General Settings**: Prefix, channels, logging configuration
+- **Moderation Setup**: Auto-moderation, roles, permissions
+- **Ticket Configuration**: Complete ticket system management
+- **Export/Import**: Backup and restore configurations
+
+### 🎫 Ticket Management
+- **`/ticketpanel`**: Create interactive ticket creation panel
+- **`/ticketconfig`**: Advanced ticket system configuration
+- **`/ticket`**: Individual ticket management commands
+
+### 🛡️ Moderation
+- **`/ban`**: Permanently remove users with reason logging
+- **`/kick`**: Remove users temporarily with moderation logs
+- **`/timeout`**: Restrict user interactions for specified duration
+- **`/warn`**: Issue warnings with automated action thresholds
+
+### ℹ️ Information & Utility
+- **`/help`**: Interactive help system with command search
+- **`/serverinfo`**: Detailed server statistics and information
+- **`/userinfo`**: Comprehensive user profile display
+- **`/avatar`**: High-resolution avatar retrieval
+- **`/ping`**: Bot latency and performance metrics
+
+### 🎪 Entertainment
+- **`/8ball`**: Magic 8-ball responses to questions
+- **`/poll`**: Interactive polls with multiple options
+- **`/endpoll`**: Manually close polls with results
+
+## 🏗️ Project Structure
+
+```
+kaoruko-bot-next/
 ├── src/
-│   ├── commands/       # Command files organized by category
-│   │   ├── admin/
-│   │   ├── fun/
-│   │   ├── info/
-│   │   ├── moderation/
-│   │   └── utility/
-│   ├── config/         # Configuration files for the bot, database, etc.
-│   │   ├── config.ts
-│   │   ├── database.ts
-│   │   └── permissions.ts
-│   ├── events/         # Handlers for Discord gateway events
-│   │   ├── guildCreate.ts
-│   │   ├── interactionCreate.ts
-│   │   ├── messageCreate.ts
-│   │   └── ready.ts
-│   ├── handlers/       # Core handlers for commands, events, and interactions
+│   ├── commands/           # Command implementations
+│   │   ├── admin/          # Administrative commands
+│   │   ├── tickets/        # Ticket system commands
+│   │   ├── info/           # Information commands
+│   │   ├── moderation/     # Moderation tools
+│   │   ├── utility/        # Utility commands
+│   │   └── fun/            # Entertainment commands
+│   ├── handlers/           # Core system handlers
 │   │   ├── commandHandler.ts
 │   │   ├── eventHandler.ts
-│   │   └── interactionHandler.ts
-│   ├── models/         # Mongoose schemas for MongoDB
+│   │   └── ticketInteractionHandler.ts
+│   ├── services/           # Business logic services
+│   │   ├── TicketService.ts
+│   │   ├── DatabaseService.ts
+│   │   └── WebServer.ts
+│   ├── models/             # Database schemas
 │   │   ├── GuildSettings.ts
-│   │   └── Poll.ts
-│   ├── services/       # Services for database connections, etc.
-│   │   └── DatabaseService.ts
-│   ├── types/          # TypeScript type definitions
-│   │   └── index.ts
-│   ├── utils/          # Utility functions and helpers
-│   │   ├── embeds.ts
-│   │   ├── helpers.ts
-│   │   ├── logger.ts
-│   │   ├── pollManager.ts
-│   │   └── webhooklogger.ts
-│   └── index.ts        # Main application entry point
-├── package-lock.json   # Records the exact version of each dependency
-├── package.json        # Project metadata and dependencies
-├── readme.md           # This file
-└── tsconfig.json       # TypeScript compiler configuration
+│   │   ├── Ticket.ts
+│   │   ├── TicketConfig.ts
+│   │   ├── Poll.ts
+│   │   └── CustomCommand.ts
+│   ├── events/             # Discord event handlers
+│   ├── utils/              # Utility functions
+│   ├── types/              # TypeScript definitions
+│   └── config/             # Configuration files
+├── scripts/                # Build and development scripts
+├── public/                 # Web dashboard assets (future)
+├── package.json           # Bun package configuration
+├── bunfig.toml           # Bun runtime configuration
+├── tsconfig.json         # TypeScript configuration
+└── README.md            # This file
 ```
 
-### ADDING NEW COMMANDS
+## 🎨 Ticket System Features
 
-1.  Create a new TypeScript file in the appropriate category under `src/commands/`.
-2.  Implement the command logic following the existing command structure.
-3.  The command handler will automatically load the new command.
-4.  Rebuild and restart the bot to see the changes.
+### 🎯 Categories & Customization
+- **Multiple Categories**: General, Technical, Billing, Reports, etc.
+- **Custom Styling**: Unique colors, emojis, and descriptions
+- **Role Requirements**: Restrict categories to specific roles
+- **Auto-assignment**: Automatically assign tickets to team members
 
-## CONTRIBUTING
+### 🔧 Management Features
+- **Claiming System**: Staff can claim tickets for ownership
+- **User Management**: Add/remove users from ticket conversations
+- **Priority Levels**: Low, Normal, High, Urgent priority classification
+- **Status Tracking**: Open, In Progress, Waiting, Closed, Archived
 
-We welcome contributions! Please follow these steps:
+### 📊 Analytics & Logging
+- **Comprehensive Logs**: All ticket actions logged with timestamps
+- **Transcript Generation**: Complete conversation history preservation
+- **Performance Metrics**: Response times, resolution rates, user satisfaction
+- **Export Capabilities**: Data export for external analysis
 
-1.  Fork the repository.
-2.  Create a new feature branch (`git checkout -b feature/amazing-feature`).
-3.  Commit your changes (`git commit -m 'Add amazing feature'`).
-4.  Push to the branch (`git push origin feature/amazing-feature`).
-5.  Open a Pull Request.
+### ⚡ Automation Features
+- **Auto-close**: Inactive ticket automatic closure
+- **Escalation Rules**: Automatic escalation based on time or priority
+- **Feedback Collection**: Post-closure satisfaction surveys
+- **Smart Notifications**: Context-aware staff notifications
 
-### ISSUE REPORTING
-When reporting issues, please include:
--   A detailed description of the problem.
--   Steps to reproduce the issue.
--   Expected vs. actual behavior.
--   Relevant screenshots or logs.
+## 🔒 Permission System
 
-## LICENSE
+### Role Hierarchy
+- **Owner**: Full system access and dangerous commands
+- **Administrator**: Complete bot configuration and management
+- **Moderator**: Moderation commands and ticket management
+- **Support**: Ticket system access and basic moderation
+- **User**: Standard command access
 
-This project is licensed under the MIT License - see the `LICENSE` file for details.
+### Granular Permissions
+- **Command-level**: Individual command access control
+- **Channel-level**: Restrict bot usage to specific channels
+- **Feature-level**: Enable/disable entire feature sets
+- **User-level**: Blacklist or whitelist specific users
 
-## SUPPORT
+## 🚀 Development
 
-For support and questions:
--   Open an issue on GitHub.
--   Join our Discord support server (link to be added).
+### Development Mode
+```bash
+bun run dev
+```
+Features hot reload, enhanced logging, and development utilities.
 
-## ACKNOWLEDGMENTS
+### Building for Production
+```bash
+bun run build
+```
+Creates optimized JavaScript build in `dist/` directory.
 
--   The **discord.js** team for their excellent library.
--   **MongoDB** for providing robust database solutions.
--   The **Discord API community** for their ongoing support.
+### Testing
+```bash
+bun test
+```
+Runs the test suite with Bun's built-in test runner.
 
-> **Note**: Ensure proper permissions are configured on your Discord server for moderation commands to function correctly. Always test new features in a development environment before deploying to production.
+### Code Quality
+```bash
+bun run lint        # Check code style
+bun run lint:fix    # Auto-fix issues
+bun run format      # Format code with Biome
+```
+
+## 📚 API Reference
+
+### Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DISCORD_TOKEN` | ✅ | - | Discord bot token |
+| `CLIENT_ID` | ✅ | - | Discord application ID |
+| `OWNER_ID` | ✅ | - | Bot owner Discord user ID |
+| `MONGODB_URI` | ✅ | - | MongoDB connection string |
+| `PREFIX` | ❌ | `.` | Default command prefix |
+| `WEB_PORT` | ❌ | `3000` | Web dashboard port |
+| `WEBHOOK_URL` | ❌ | - | Discord webhook for error logging |
+| `NODE_ENV` | ❌ | `development` | Environment mode |
+
+### Configuration Export Format
+```json
+{
+  "guildSettings": {
+    "prefix": "!",
+    "logCommands": true,
+    "autoModeration": {
+      "enabled": true,
+      "deleteInvites": true,
+      "spamThreshold": 5
+    }
+  },
+  "ticketConfig": {
+    "enabled": true,
+    "maxTicketsPerUser": 3,
+    "categories": {
+      "general": {
+        "name": "General Support",
+        "emoji": "❓",
+        "color": "#5865F2"
+      }
+    }
+  }
+}
+```
+
+## 🤝 Contributing
+
+### Development Guidelines
+1. **Code Style**: Follow TypeScript best practices
+2. **Commit Messages**: Use conventional commit format
+3. **Testing**: Include tests for new features
+4. **Documentation**: Update README and code comments
+
+### Pull Request Process
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes with tests
+4. Run quality checks (`bun run lint && bun test`)
+5. Commit changes (`git commit -m 'feat: add amazing feature'`)
+6. Push to branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Bot not responding to commands**
+- Verify the bot token in `.env`
+- Check bot permissions in Discord server
+- Ensure MongoDB connection is working
+
+**Ticket system not working**
+- Run `/config tickets status` to check configuration
+- Verify category channel exists and bot has permissions
+- Check support role assignments
+
+**Build failures**
+- Ensure Bun is installed and up to date
+- Clear cache: `rm -rf node_modules bun.lockb && bun install`
+- Check TypeScript configuration
+
+### Debug Mode
+Set `NODE_ENV=development` for enhanced logging and debugging information.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **Discord.js Team**: Excellent Discord API library
+- **Bun Team**: Revolutionary JavaScript runtime
+- **MongoDB Team**: Robust database solutions
+- **TypeScript Team**: Enhanced JavaScript development
+- **Open Source Community**: Inspiration and contributions
+
+---
+
+**Need Help?** 
+- 📖 [Documentation](https://docs.example.com) (coming soon)
+- 💬 [Discord Support Server](https://discord.gg/example) (coming soon)
+- 🐛 [Issue Tracker](https://github.com/your-repo/issues)
+- 📧 [Contact Us](mailto:support@example.com)
+
+> **⚠️ Note**: This bot requires proper Discord permissions to function correctly. Always test in a development server before production deployment.

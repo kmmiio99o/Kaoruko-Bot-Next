@@ -16,6 +16,7 @@ import { WebhookLogger } from "./utils/webhooklogger";
 import { Database } from "./config/database";
 import { DatabaseService } from "./services/DatabaseService";
 import { WebServer } from "./services/WebServer";
+import { TicketInteractionHandler } from "./handlers/ticketInteractionHandler";
 
 const client = new Client({
   intents: [
@@ -31,6 +32,7 @@ const client = new Client({
 const commandHandler = new CommandHandler();
 const eventHandler = new EventHandler();
 const webServer = new WebServer(client, commandHandler, config.webPort);
+const ticketHandler = new TicketInteractionHandler();
 
 // Status system variables
 let startTime: number | null = null;
@@ -192,6 +194,30 @@ function getUptime(): string {
 }
 
 client.on("interactionCreate", async (interaction: any) => {
+  // Handle button interactions for tickets
+  if (interaction.isButton() && interaction.customId.startsWith("ticket_")) {
+    try {
+      await ticketHandler.handleTicketInteraction(interaction);
+    } catch (error) {
+      Logger.error("Error handling ticket button interaction:", error);
+    }
+    return;
+  }
+
+  // Handle modal submissions for tickets
+  if (
+    interaction.isModalSubmit() &&
+    (interaction.customId.startsWith("ticket_") ||
+      interaction.customId.startsWith("close_reason_"))
+  ) {
+    try {
+      await ticketHandler.handleModalSubmit(interaction);
+    } catch (error) {
+      Logger.error("Error handling ticket modal submission:", error);
+    }
+    return;
+  }
+
   // Handle slash commands
   if (interaction.isChatInputCommand()) {
     const commandHandler = (client as any).commandHandler;

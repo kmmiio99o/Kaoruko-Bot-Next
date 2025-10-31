@@ -1,31 +1,48 @@
 {
-  "name": "kaoruko-bot-Next",
-  "version": "1.0",
+  "name": "kaoruko-bot-next",
+  "version": "1.0.0",
   "description": "Kaoruko is a Discord bot with many commands",
   "main": "dist/index.js",
+  "type": "commonjs",
   "scripts": {
-    "build": "node scripts/build.js",
-    "start": "node dist/index.js",
-    "dev": "node scripts/dev.js",
-    "watch": "tsc -w"
+    "build": "bun run scripts/build.js",
+    "start": "bun run dist/index.js",
+    "dev": "bun run scripts/dev.js",
+    "watch": "bun --watch src/index.ts",
+    "clean": "rm -rf dist node_modules",
+    "lint": "bunx @biomejs/biome check .",
+    "lint:fix": "bunx @biomejs/biome check --apply .",
+    "format": "bunx @biomejs/biome format --write ."
   },
   "dependencies": {
     "axios": "^1.12.2",
-    "child_process": "^1.0.2",
     "cors": "^2.8.5",
     "discord.js": "^14.14.1",
     "dotenv": "^17.2.2",
-    "express": "^4.18.2",
+    "express": "^5.1.0",
     "mongodb": "^6.19.0",
     "mongoose": "^8.18.1",
     "socket.io": "^4.7.5"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.3.2",
     "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
+    "@types/express": "^5.0.5",
     "@types/node": "^24.5.1",
-    "ts-node": "^10.9.1",
-    "typescript": "^5.3.2",
-    "wrangler": "^4.38.0"
-  }
+    "typescript": "^5.3.2"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "trustedDependencies": [
+    "@biomejs/biome"
+  ],
+  "keywords": [
+    "discord",
+    "bot",
+    "typescript",
+    "bun"
+  ],
+  "author": "Kaoruko Bot Team",
+  "license": "MIT"
 }

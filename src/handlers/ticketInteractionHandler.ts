@@ -356,65 +356,107 @@ export class TicketInteractionHandler {
   ): Promise<void> {
     const ticketId = customId.replace("confirm_close_", "");
 
-    // Immediately acknowledge the interaction to avoid "This interaction failed"
-    // We use deferReply so we can later call editReply/followUp.
-    await interaction.deferReply({ flags: 64 });
+    try {
+      Logger.info(`Starting close confirmation for ticket ${ticketId}`);
 
-    // Find the ticket by ID
-    const ticket = await Ticket.findOne({
-      ticketId,
-      guildId: interaction.guild!.id,
-    });
-
-    if (!ticket) {
-      // We already deferred, so edit the reply instead of replying.
-      await interaction.editReply({
-        embeds: [Embeds.error("Error", "Could not find the ticket to close.")],
-      });
-      return;
-    }
-
-    const success = await this.ticketService.closeTicket(
-      interaction.guild!,
-      ticket.ticketId,
-      interaction.user,
-      "Closed via button confirmation",
-      true,
-    );
-
-    if (success) {
-      const embed = new EmbedBuilder()
-        .setTitle("✅ Ticket Closed")
-        .setDescription(
-          `Ticket **${ticket.ticketId}** has been closed successfully.\n\n` +
-            `A transcript has been generated and saved.`,
-        )
-        .setColor("#00FF00")
-        .setTimestamp();
-
-      await interaction.editReply({
-        embeds: [embed],
-        components: [], // Remove buttons
+      // Send a processing message immediately
+      await interaction.update({
+        embeds: [
+          new EmbedBuilder()
+            .setTitle("⏳ Processing")
+            .setDescription("Closing ticket, please wait...")
+            .setColor("#FFA500"),
+        ],
+        components: [], // Remove buttons while processing
       });
 
-      // Update the original message to remove buttons
+      // Find the ticket by ID
+      Logger.info(`Looking up ticket ${ticketId} in database`);
+      const ticket = await Ticket.findOne({
+        ticketId,
+        guildId: interaction.guild!.id,
+      });
+
+      if (!ticket) {
+        Logger.error(`Ticket ${ticketId} not found in database`);
+        await interaction.message.edit({
+          embeds: [
+            Embeds.error("Error", "Could not find the ticket to close."),
+          ],
+          components: [], // Remove buttons
+        });
+        return;
+      }
+
+      Logger.info(`Attempting to close ticket ${ticketId}`);
+      const success = await this.ticketService.closeTicket(
+        interaction.guild!,
+        ticket.ticketId,
+        interaction.user,
+        "Closed via button confirmation",
+        true,
+      );
+
+      if (success) {
+        const embed = new EmbedBuilder()
+          .setTitle("✅ Ticket Closed")
+          .setDescription(
+            `Ticket **${ticket.ticketId}** has been closed successfully.\n\n` +
+              `A transcript has been generated and saved.`,
+          )
+          .setColor("#00FF00")
+          .setTimestamp();
+
+        Logger.info(`Successfully closed ticket ${ticketId}`);
+        await interaction.message.edit({
+          embeds: [embed],
+          components: [], // Remove buttons
+        });
+      } else {
+        Logger.error(
+          `Failed to close ticket ${ticketId} - service returned false`,
+        );
+        await interaction.message.edit({
+          embeds: [
+            Embeds.error(
+              "Close Failed",
+              "The ticket could not be closed. Please try again or contact an administrator.",
+            ),
+          ],
+          components: [], // Remove buttons
+        });
+      }
+    } catch (error) {
+      Logger.error(`Error in handleConfirmClose: ${error}`);
+
+      // Try multiple ways to show the error to the user
       try {
         await interaction.message.edit({
-          embeds: interaction.message.embeds,
-          components: [],
+          embeds: [
+            Embeds.error(
+              "Close Failed",
+              "An unexpected error occurred while closing the ticket. Please try again or contact an administrator.",
+            ),
+          ],
+          components: [], // Remove buttons
         });
-      } catch (error) {
-        Logger.error(`Failed to update original close message: ${error}`);
+      } catch (editError) {
+        Logger.error(`Failed to edit message: ${editError}`);
+        try {
+          // Fall back to followUp if edit fails
+          await interaction.followUp({
+            embeds: [
+              Embeds.error(
+                "Close Failed",
+                "An unexpected error occurred while closing the ticket. Please try again or contact an administrator.",
+              ),
+            ],
+            ephemeral: true,
+          });
+        } catch (followError) {
+          Logger.error(`Failed to send followUp: ${followError}`);
+        }
       }
-    } else {
-      await interaction.editReply({
-        embeds: [
-          Embeds.error(
-            "Close Failed",
-            "Failed to close the ticket. Please try again.",
-          ),
-        ],
-      });
     }
   }
 

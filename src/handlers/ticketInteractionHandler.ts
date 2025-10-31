@@ -50,13 +50,13 @@ export class TicketInteractionHandler {
         await this.handleAddUser(interaction, customId);
       } else if (customId.startsWith("ticket_remove_user_")) {
         await this.handleRemoveUser(interaction, customId);
-      } else if (customId === "confirm_close_ticket") {
-        await this.handleConfirmClose(interaction);
-      } else if (customId === "cancel_close_ticket") {
+      } else if (customId.startsWith("confirm_close_")) {
+        await this.handleConfirmClose(interaction, customId);
+      } else if (customId.startsWith("cancel_close_")) {
         await this.handleCancelClose(interaction);
-      } else if (customId === "confirm_delete_ticket") {
-        await this.handleConfirmDelete(interaction);
-      } else if (customId === "cancel_delete_ticket") {
+      } else if (customId.startsWith("confirm_delete_")) {
+        await this.handleConfirmDelete(interaction, customId);
+      } else if (customId.startsWith("cancel_delete_")) {
         await this.handleCancelDelete(interaction);
       }
     } catch (error) {
@@ -313,15 +313,15 @@ export class TicketInteractionHandler {
       return;
     }
 
-    // Show confirmation buttons instead of modal
+    // Show confirmation buttons with ticket ID in custom ID
     const confirmButton = new ButtonBuilder()
-      .setCustomId("confirm_close_ticket")
+      .setCustomId(`confirm_close_${ticketId}`)
       .setLabel("Confirm Close")
       .setStyle(ButtonStyle.Danger)
       .setEmoji("✅");
 
     const cancelButton = new ButtonBuilder()
-      .setCustomId("cancel_close_ticket")
+      .setCustomId(`cancel_close_${ticketId}`)
       .setLabel("Cancel")
       .setStyle(ButtonStyle.Secondary)
       .setEmoji("❌");
@@ -343,34 +343,22 @@ export class TicketInteractionHandler {
       .setColor("#FF6B35")
       .setTimestamp();
 
-    // Store ticket ID in a way we can retrieve it
-    const response = await interaction.reply({
+    await interaction.reply({
       embeds: [embed],
       components: [row],
       flags: 64,
     });
-
-    // Store the ticket ID for confirmation handling
-    (interaction as any).ticketToClose = ticketId;
   }
 
   private async handleConfirmClose(
     interaction: ButtonInteraction,
+    customId: string,
   ): Promise<void> {
-    const originalInteraction = interaction.message.interaction;
-    if (!originalInteraction) {
-      await interaction.reply({
-        embeds: [
-          Embeds.error("Error", "Could not find the original ticket to close."),
-        ],
-        flags: 64,
-      });
-      return;
-    }
+    const ticketId = customId.replace("confirm_close_", "");
 
-    // Find the ticket from the channel
+    // Find the ticket by ID
     const ticket = await Ticket.findOne({
-      channelId: interaction.channelId,
+      ticketId,
       guildId: interaction.guild!.id,
     });
 
@@ -510,13 +498,13 @@ export class TicketInteractionHandler {
     }
 
     const confirmButton = new ButtonBuilder()
-      .setCustomId("confirm_delete_ticket")
+      .setCustomId(`confirm_delete_${ticketId}`)
       .setLabel("Delete Permanently")
       .setStyle(ButtonStyle.Danger)
       .setEmoji("🗑️");
 
     const cancelButton = new ButtonBuilder()
-      .setCustomId("cancel_delete_ticket")
+      .setCustomId(`cancel_delete_${ticketId}`)
       .setLabel("Cancel")
       .setStyle(ButtonStyle.Secondary);
 
@@ -542,9 +530,12 @@ export class TicketInteractionHandler {
 
   private async handleConfirmDelete(
     interaction: ButtonInteraction,
+    customId: string,
   ): Promise<void> {
+    const ticketId = customId.replace("confirm_delete_", "");
+
     const ticket = await Ticket.findOne({
-      channelId: interaction.channelId,
+      ticketId,
       guildId: interaction.guild!.id,
     });
 

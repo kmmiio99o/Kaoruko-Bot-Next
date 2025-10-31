@@ -575,29 +575,9 @@ export class TicketService {
           selectMenu,
         );
 
-      // Create management buttons
-      const managementButtons =
-        new ActionRowBuilder<ButtonBuilder>().addComponents(
-          new ButtonBuilder()
-            .setCustomId("ticket_panel_info")
-            .setLabel("Ticket Info")
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji("ℹ️"),
-          new ButtonBuilder()
-            .setCustomId("ticket_panel_stats")
-            .setLabel("Statistics")
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji("📊"),
-          new ButtonBuilder()
-            .setCustomId("ticket_manage_categories")
-            .setLabel("Manage Categories")
-            .setStyle(ButtonStyle.Success)
-            .setEmoji("⚙️"),
-        );
-
       const message = await channel.send({
         embeds: [embed],
-        components: [selectRow, managementButtons],
+        components: [selectRow],
       });
 
       // Update config with panel message ID
@@ -729,7 +709,25 @@ export class TicketService {
         .setEmoji("✋"),
     );
 
-    await channel.send({ embeds: [embed], components: [row] });
+    let mentionContent = "";
+    if (config.mentionSupportOnCreate) {
+      const rolesToMention = new Set<string>();
+      config.supportRoles.forEach((roleId) => rolesToMention.add(roleId));
+      config.adminRoles.forEach((roleId) => rolesToMention.add(roleId));
+
+      if (rolesToMention.size > 0) {
+        mentionContent = Array.from(rolesToMention)
+          .map((roleId) => `<@&${roleId}>`)
+          .join(" ");
+        mentionContent += ` A new ticket (${ticket.ticketId}) has been created by ${user}!`;
+      }
+    }
+
+    await channel.send({
+      content: mentionContent,
+      embeds: [embed],
+      components: [row],
+    });
   }
 
   /**

@@ -68,8 +68,6 @@ export interface ITicket extends Document {
   metadata: {
     parentCategoryId?: string;
     originalChannelId?: string;
-    claimedBy?: string;
-    claimedAt?: Date;
     escalatedBy?: string;
     escalatedAt?: Date;
     rating?: number;
@@ -131,8 +129,6 @@ const TicketSchema = new Schema({
   metadata: {
     parentCategoryId: { type: String },
     originalChannelId: { type: String },
-    claimedBy: { type: String },
-    claimedAt: { type: Date },
     escalatedBy: { type: String },
     escalatedAt: { type: Date },
     rating: { type: Number, min: 1, max: 5 },

@@ -224,6 +224,16 @@ export class TicketService {
       }
 
       const channel = guild.channels.cache.get(ticket.channelId) as TextChannel;
+
+      await Ticket.deleteOne({
+        ticketId: ticket.ticketId,
+        guildId: ticket.guildId,
+      });
+      +Logger.debug(
+        `Attempting to delete ticket ${ticket.ticketId} from database`,
+      );
+      +(+Logger.debug(`Ticket ${ticket.ticketId} deleted from database`));
+
       if (!channel) {
         Logger.warn(`Ticket channel ${ticket.channelId} not found`);
         // Update ticket status anyway
@@ -275,11 +285,6 @@ export class TicketService {
 
       const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
-          .setCustomId(`ticket_reopen_${ticket.ticketId}`)
-          .setLabel("Reopen Ticket")
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji("🔓"),
-        new ButtonBuilder()
           .setCustomId(`ticket_delete_${ticket.ticketId}`)
           .setLabel("Delete Ticket")
           .setStyle(ButtonStyle.Danger)
@@ -306,25 +311,36 @@ export class TicketService {
       }
 
       // Auto-delete after configured time
-      if (config.autoDeleteAfter) {
-        setTimeout(
-          async () => {
-            try {
-              const channelToDelete = guild.channels.cache.get(
-                ticket.channelId,
-              );
-              if (channelToDelete) {
-                await channelToDelete.delete("Ticket auto-delete");
-              }
-            } catch (error) {
-              Logger.error(
-                `Failed to auto-delete ticket channel ${ticket.channelId}: ${error}`,
-              );
-            }
-          },
-          config.autoDeleteAfter * 60 * 60 * 1000,
-        ); // Convert hours to milliseconds
-      }
+      // Broken and throws errors???
+      // TODO:
+      // - Fix it
+      // - Implement error handling
+      // - Improve it
+      //
+      // if (config.autoDeleteAfter) {
+      //   setTimeout(
+      //     async () => {
+      //       try {
+      //         const channelToDelete = guild.channels.cache.get(
+      //           ticket.channelId,
+      //         );
+      //         if (channelToDelete) {
+      //           await channelToDelete.delete("Ticket auto-delete");
+      //         }
+      //       } catch (error) {
+      //         Logger.error(
+      //           `Failed to auto-delete ticket channel ${ticket.channelId}: ${error}`,
+      //         );
+      //       }
+      //     },
+      //     config.autoDeleteAfter * 60 * 60 * 1000,
+      //   );
+      // }
+
+      await Ticket.deleteOne({
+        ticketId: ticket.ticketId,
+        guildId: ticket.guildId,
+      });
 
       Logger.info(
         `Ticket ${ticketId} closed in guild ${guild.id} by user ${closedBy.id}`,
@@ -338,89 +354,7 @@ export class TicketService {
     }
   }
 
-  /**
-   * Reopen a ticket
-   */
-  async reopenTicket(
-    guild: Guild,
-    ticketId: string,
-    reopenedBy: User,
-  ): Promise<boolean> {
-    try {
-      const ticket = await Ticket.findOne({ ticketId, guildId: guild.id });
-      if (!ticket) {
-        Logger.warn(`Ticket ${ticketId} not found in guild ${guild.id}`);
-        return false;
-      }
-
-      if (ticket.status !== TicketStatus.CLOSED) {
-        Logger.warn(`Ticket ${ticketId} is not closed + ": " + cannot reopen`);
-        return false;
-      }
-
-      const channel = guild.channels.cache.get(ticket.channelId) as TextChannel;
-      if (!channel) {
-        Logger.warn(`Ticket channel ${ticket.channelId} not found`);
-        return false;
-      }
-
-      // Reopen ticket
-      ticket.status = TicketStatus.OPEN;
-      ticket.reopenCount += 1;
-      ticket.closedBy = undefined;
-      ticket.closedAt = undefined;
-      ticket.closeReason = undefined;
-      ticket.lastActivity = new Date();
-      await ticket.save();
-
-      // Send reopening message
-      const embed = new EmbedBuilder()
-        .setTitle("🔓 Ticket Reopened")
-        .setDescription(`This ticket has been reopened by ${reopenedBy.tag}`)
-        .addFields(
-          { name: "Ticket ID", value: ticket.ticketId, inline: true },
-          {
-            name: "Reopened At",
-            value: `<t:${Math.floor(Date.now() / 1000)}:F>`,
-            inline: true,
-          },
-          {
-            name: "Reopen Count",
-            value: ticket.reopenCount.toString(),
-            inline: true,
-          },
-        )
-        .setColor("#00FF00")
-        .setTimestamp();
-
-      await channel.send({ embeds: [embed] });
-
-      // Log ticket reopening
-      const config = await TicketConfig.findByGuild(guild.id);
-      if (config && config.logChannelId) {
-        await this.logTicketEvent(
-          guild,
-          config.logChannelId,
-          "reopened",
-          ticket,
-          reopenedBy,
-        );
-      }
-
-      Logger.info(
-        `Ticket ${ticketId} reopened in guild ${guild.id} by user ${reopenedBy.id}`,
-      );
-      return true;
-    } catch (error) {
-      Logger.error(
-        `Failed to reopen ticket ${ticketId} in guild ${guild.id}: ${error}`,
-      );
-      return false;
-    }
-  }
-
-  /**
-   * Add user to ticket
+  /*   * Add user to ticket
    */
   async addUserToTicket(
     guild: Guild,
@@ -702,11 +636,6 @@ export class TicketService {
         .setLabel("Close Ticket")
         .setStyle(ButtonStyle.Danger)
         .setEmoji("🔒"),
-      new ButtonBuilder()
-        .setCustomId(`ticket_claim_${ticket.ticketId}`)
-        .setLabel("Claim Ticket")
-        .setStyle(ButtonStyle.Success)
-        .setEmoji("✋"),
     );
 
     let mentionContent = "";
@@ -851,8 +780,6 @@ export class TicketService {
         return "#00FF00";
       case "closed":
         return "#FF0000";
-      case "reopened":
-        return "#FFFF00";
       case "claimed":
         return "#0000FF";
       default:

@@ -42,7 +42,7 @@ export const command: ICommand = {
         "Command handler is not available.",
       );
       if (isSlashCommand) {
-        await interaction!.reply({ embeds: [errorEmbed], ephemeral: true });
+        await interaction!.reply({ embeds: [errorEmbed], flags: 64 });
       } else if (message) {
         await message.reply({ embeds: [errorEmbed] });
       }
@@ -66,7 +66,7 @@ export const command: ICommand = {
           `The command \`${commandName}\` was not found.`,
         );
         if (isSlashCommand) {
-          await interaction!.reply({ embeds: [embed], ephemeral: true });
+          await interaction!.reply({ embeds: [embed], flags: 64 });
         } else if (message) {
           await message.reply({ embeds: [embed] });
         }

@@ -45,14 +45,14 @@ export const command: ICommand = {
       default:
         await interaction.reply({
           content: "Unknown subcommand",
-          ephemeral: true,
+          flags: [64],
         });
     }
   },
 };
 
 async function handleReopenCommand(interaction: ChatInputCommandInteraction) {
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: [64] });
 
   try {
     const ticketId = interaction.options.getString("ticket_id", true);

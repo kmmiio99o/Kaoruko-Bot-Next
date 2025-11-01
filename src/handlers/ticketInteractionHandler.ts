@@ -77,14 +77,14 @@ export class TicketInteractionHandler {
               embeds: [
                 Embeds.success("Success", "The ticket has been reopened."),
               ],
-              ephemeral: true,
+              flags: [64],
             });
           } else {
             await interaction.reply({
               embeds: [
                 Embeds.error("Error", "Could not find the ticket to reopen."),
               ],
-              ephemeral: true,
+              flags: [64],
             });
           }
         }
@@ -108,7 +108,7 @@ export class TicketInteractionHandler {
   private async handleCreateTicket(
     interaction: ButtonInteraction,
   ): Promise<void> {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: 64 });
 
     try {
       const categoryId = interaction.customId.replace(
@@ -190,7 +190,7 @@ export class TicketInteractionHandler {
   private async handleTicketDelete(
     interaction: ButtonInteraction,
   ): Promise<void> {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: 64 });
 
     try {
       const ticket = await Ticket.findOne({
@@ -475,7 +475,7 @@ export class TicketInteractionHandler {
               "Ticket system is not configured for this server.",
             ),
           ],
-          ephemeral: true,
+          flags: 64,
         });
         return;
       }
@@ -495,7 +495,7 @@ export class TicketInteractionHandler {
               `Category ${categoryId} is not available. Available categories: ${Array.from(config.categories.keys()).join(", ")}`,
             ),
           ],
-          ephemeral: true,
+          flags: 64,
         });
         return;
       }
@@ -550,7 +550,7 @@ export class TicketInteractionHandler {
             "An error occurred while processing your selection. Please try again or contact an administrator.",
           ),
         ],
-        ephemeral: true,
+        flags: [64],
       });
     }
   }
@@ -558,9 +558,21 @@ export class TicketInteractionHandler {
   private async handleCloseTicket(
     interaction: ButtonInteraction,
   ): Promise<void> {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: [64] });
 
     try {
+      // Send a follow-up message to inform the user that processing is in progress
+      // This is crucial to prevent the "Unknown Message" / "InteractionAlreadyReplied" errors
+      await interaction.followUp({
+        embeds: [
+          Embeds.info(
+            "Ticket Closure in Progress",
+            "Your ticket is being closed and archived. Please wait...",
+          ),
+        ],
+        flags: [64],
+      });
+
       const ticketId = interaction.customId.replace("ticket_close_", "");
       const ticket = await Ticket.findOne({
         ticketId: ticketId,
@@ -703,7 +715,7 @@ export class TicketInteractionHandler {
   private async handleGenerateTranscript(
     interaction: ButtonInteraction,
   ): Promise<void> {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: [64] });
 
     try {
       const ticket = await Ticket.findOne({

@@ -55,7 +55,7 @@ export const command: ICommand = {
         );
 
         if (isSlashCommand && interaction) {
-          await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+          await interaction.reply({ embeds: [errorEmbed], flags: [64] });
         } else if (message) {
           await message.reply({ embeds: [errorEmbed] });
         }
@@ -70,7 +70,7 @@ export const command: ICommand = {
         );
 
         if (isSlashCommand && interaction) {
-          await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+          await interaction.reply({ embeds: [errorEmbed], flags: [64] });
         } else if (message) {
           await message.reply({ embeds: [errorEmbed] });
         }
@@ -86,7 +86,7 @@ export const command: ICommand = {
         );
 
         if (isSlashCommand && interaction) {
-          await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+          await interaction.reply({ embeds: [errorEmbed], flags: [64] });
         } else if (message) {
           await message.reply({ embeds: [errorEmbed] });
         }
@@ -107,7 +107,7 @@ export const command: ICommand = {
         );
 
         if (isSlashCommand && interaction) {
-          await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+          await interaction.reply({ embeds: [errorEmbed], flags: [64] });
         } else if (message) {
           await message.reply({ embeds: [errorEmbed] });
         }
@@ -150,7 +150,7 @@ export const command: ICommand = {
           if (interaction.deferred) {
             await interaction.editReply({ embeds: [errorEmbed] });
           } else {
-            await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+            await interaction.reply({ embeds: [errorEmbed], flags: [64] });
           }
         } else if (message) {
           await message.reply({ embeds: [errorEmbed] });
@@ -168,7 +168,7 @@ export const command: ICommand = {
         if (interaction.deferred) {
           await interaction.editReply({ embeds: [errorEmbed] });
         } else if (!interaction.replied) {
-          await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+          await interaction.reply({ embeds: [errorEmbed], flags: [64] });
         }
       } else if (message) {
         await message.reply({ embeds: [errorEmbed] });

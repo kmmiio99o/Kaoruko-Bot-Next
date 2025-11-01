@@ -20,7 +20,7 @@ export default {
       // Slash command version
       const sent = await interaction.reply({
         embeds: [Embeds.info("Pinging...", "Calculating ping...")],
-        flags: [64], // EPHEMERAL flag
+        flags: [64],
         fetchReply: true,
       });
 

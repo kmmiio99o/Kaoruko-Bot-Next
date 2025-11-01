@@ -38,7 +38,7 @@ export default {
                   "This command can only be used in a server.",
                 ),
               ],
-              flags: [64], // EPHEMERAL flag
+              flags: [64],
             });
           }
           return;
@@ -83,7 +83,7 @@ export default {
                 "You need Moderate Members permission to use this command.",
               ),
             ],
-            flags: [64], // EPHEMERAL flag
+            flags: [64],
           });
         } else if (message) {
           await message.reply({
@@ -177,7 +177,7 @@ export default {
                 "Please specify a valid user to timeout.",
               ),
             ],
-            flags: [64], // EPHEMERAL flag
+            flags: [64],
           });
         } else if (message) {
           await message.reply({
@@ -203,7 +203,7 @@ export default {
                 "Please provide a valid duration (e.g., 1m, 5h, 1d).\nSupported units: s (seconds), m (minutes), h (hours), d (days)",
               ),
             ],
-            flags: [64], // EPHEMERAL flag
+            flags: [64],
           });
         } else if (message) {
           await message.reply({
@@ -229,7 +229,7 @@ export default {
                 "Timeout duration cannot exceed 28 days.",
               ),
             ],
-            flags: [64], // EPHEMERAL flag
+            flags: [64],
           });
         } else if (message) {
           await message.reply({
@@ -257,7 +257,7 @@ export default {
                 "Could not find that user in this server.",
               ),
             ],
-            flags: [64], // EPHEMERAL flag
+            flags: [64],
           });
           return;
         }
@@ -274,7 +274,7 @@ export default {
                 "I cannot timeout this user. They may have a higher role than me or be the server owner.",
               ),
             ],
-            flags: [64], // EPHEMERAL flag
+            flags: [64],
           });
         } else if (message) {
           await message.reply({
@@ -302,7 +302,7 @@ export default {
                 `${targetUser.tag || targetUser.user?.tag || "Unknown User"} has been timed out for ${durationFormatted}.\n**Reason:** ${reason}`,
               ),
             ],
-            flags: [64], // EPHEMERAL flag
+            flags: [64],
           });
         } else if (message) {
           await message.reply({
@@ -331,7 +331,7 @@ export default {
                 `Failed to timeout ${targetUser.tag || targetUser.user?.tag || "Unknown User"}: ${error.message || "Unknown error"}`,
               ),
             ],
-            flags: [64], // EPHEMERAL flag
+            flags: [64],
           });
         } else if (message) {
           await message.reply({
@@ -355,7 +355,7 @@ export default {
               `An error occurred: ${error.message || "Unknown error"}`,
             ),
           ],
-          flags: [64], // EPHEMERAL flag
+          flags: [64],
         });
       } else if (message) {
         await message.reply({

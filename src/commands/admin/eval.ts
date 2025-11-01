@@ -35,7 +35,7 @@ export const command: ICommand = {
             "Bot owner ID not found. Please set OWNER_ID in environment variables.",
           ),
         ],
-        ephemeral: true,
+        flags: 64,
       });
       return;
     }
@@ -67,7 +67,7 @@ export const command: ICommand = {
             "Only the bot owner can use this command.",
           ),
         ],
-        ephemeral: true,
+        flags: 64,
       });
       return;
     }
@@ -98,7 +98,7 @@ export const command: ICommand = {
             `\`\`\`js\n${error.message || error}\n\`\`\``,
           ),
         ],
-        ephemeral: true,
+        flags: 64,
       });
     }
   },

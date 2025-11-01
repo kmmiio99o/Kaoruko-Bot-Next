@@ -37,7 +37,7 @@ export default {
                   "This command can only be used in a server.",
                 ),
               ],
-              flags: [64], // EPHEMERAL flag
+              flags: [64],
             });
           }
           return;
@@ -80,7 +80,7 @@ export default {
                 "You need Ban Members permission to use this command.",
               ),
             ],
-            flags: [64], // EPHEMERAL flag
+            flags: [64],
           });
         } else if (message) {
           await message.reply({
@@ -164,7 +164,7 @@ export default {
                 "Please specify a valid user to ban.",
               ),
             ],
-            flags: [64], // EPHEMERAL flag
+            flags: [64],
           });
         } else if (message) {
           await message.reply({
@@ -201,7 +201,7 @@ export default {
                 "I cannot ban this user. They may have a higher role than me or be the server owner.",
               ),
             ],
-            flags: [64], // EPHEMERAL flag
+            flags: [64],
           });
         } else if (message) {
           await message.reply({
@@ -231,7 +231,7 @@ export default {
                 `${targetUser.tag || targetUser.user?.tag || "Unknown User"} has been banned.\n**Reason:** ${reason}`,
               ),
             ],
-            flags: [64], // EPHEMERAL flag
+            flags: [64],
           });
         } else if (message) {
           await message.reply({
@@ -260,7 +260,7 @@ export default {
                 `Failed to ban ${targetUser.tag || targetUser.user?.tag || "Unknown User"}: ${error.message || "Unknown error"}`,
               ),
             ],
-            flags: [64], // EPHEMERAL flag
+            flags: [64],
           });
         } else if (message) {
           await message.reply({
@@ -284,7 +284,7 @@ export default {
               `An error occurred: ${error.message || "Unknown error"}`,
             ),
           ],
-          flags: [64], // EPHEMERAL flag
+          flags: [64],
         });
       } else if (message) {
         await message.reply({

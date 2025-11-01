@@ -1,6 +1,7 @@
 import {
   ButtonInteraction,
   ModalSubmitInteraction,
+  StringSelectMenuInteraction,
   GuildMember,
   TextChannel,
   Message,
@@ -13,7 +14,9 @@ import {
   TextInputStyle,
   PermissionFlagsBits,
   AttachmentBuilder,
+  MessageFlags,
 } from "discord.js";
+import { WebhookLogger } from "../utils/webhooklogger";
 import {
   default as Ticket,
   ITicket,
@@ -45,11 +48,48 @@ export class TicketInteractionHandler {
       } else if (customId.startsWith("ticket_delete_")) {
         await this.handleTicketDelete(interaction as ButtonInteraction);
       } else if (customId.startsWith("ticket_reopen_")) {
-        await this.handleReopenTicket(interaction as ButtonInteraction);
+        const channel = await interaction.guild!.channels.fetch(
+          interaction.channelId,
+        );
+        if (channel?.isTextBased()) {
+          const ticket = await Ticket.findOne({
+            ticketId: customId.replace("ticket_reopen_", ""),
+            guildId: interaction.guild!.id,
+          });
+          if (ticket) {
+            await ticket.updateOne({
+              status: TicketStatus.OPEN,
+              $inc: { reopenCount: 1 },
+              closedBy: null,
+              closedAt: null,
+              closeReason: null,
+              lastActivity: new Date(),
+            });
+            await channel.send({
+              embeds: [
+                Embeds.success(
+                  "Ticket Reopened",
+                  `Ticket reopened by ${interaction.user}.`,
+                ),
+              ],
+            });
+            await interaction.reply({
+              embeds: [
+                Embeds.success("Success", "The ticket has been reopened."),
+              ],
+              ephemeral: true,
+            });
+          } else {
+            await interaction.reply({
+              embeds: [
+                Embeds.error("Error", "Could not find the ticket to reopen."),
+              ],
+              ephemeral: true,
+            });
+          }
+        }
       } else if (customId.startsWith("ticket_transcript_")) {
         await this.handleGenerateTranscript(interaction as ButtonInteraction);
-      } else if (customId.startsWith("ticket_category_")) {
-        await this.handleCategorySelect(interaction as ButtonInteraction);
       }
     } catch (error) {
       Logger.error(`Error handling ticket interaction: ${error}`);
@@ -392,28 +432,53 @@ export class TicketInteractionHandler {
   }
 
   public async handleCategorySelect(
-    interaction: ButtonInteraction,
+    interaction: StringSelectMenuInteraction,
   ): Promise<void> {
-    await interaction.deferReply({ ephemeral: true });
-
     try {
-      const categoryId = interaction.customId.replace(
-        "ticket_category_",
-        "",
-      ) as TicketCategory;
+      let categoryId = interaction.values[0] as TicketCategory;
+      Logger.info(
+        `Category selected: ${categoryId} by user ${interaction.user.tag} in guild ${interaction.guild!.id}`,
+      );
 
       const config = await TicketConfig.findByGuild(interaction.guild!.id);
-      if (!config || !config.categories.has(categoryId)) {
-        await interaction.editReply({
+      if (!config) {
+        Logger.error(
+          `No ticket config found for guild ${interaction.guild!.id}`,
+        );
+        await interaction.reply({
           embeds: [
             Embeds.error(
-              "Invalid Category",
-              "This ticket category is not available.",
+              "Configuration Error",
+              "Ticket system is not configured for this server.",
             ),
           ],
+          ephemeral: true,
         });
         return;
       }
+
+      // Get category from the Map
+      const category = Array.from(config.categories.entries()).find(
+        ([id]) => id === categoryId,
+      );
+      if (!category) {
+        Logger.error(
+          `Invalid category ${categoryId} selected in guild ${interaction.guild!.id}`,
+        );
+        await interaction.reply({
+          embeds: [
+            Embeds.error(
+              "Invalid Category",
+              `Category ${categoryId} is not available. Available categories: ${Array.from(config.categories.keys()).join(", ")}`,
+            ),
+          ],
+          ephemeral: true,
+        });
+        return;
+      }
+      Logger.info(
+        `Valid category ${categoryId} found with config: ${JSON.stringify(category[1])}`,
+      );
 
       // Show ticket creation modal
       const modal = new ModalBuilder()
@@ -446,14 +511,23 @@ export class TicketInteractionHandler {
       modal.addComponents(firstRow, secondRow);
       await interaction.showModal(modal);
     } catch (error) {
-      Logger.error(`Error handling category select: ${error}`);
-      await interaction.editReply({
+      const errorMsg = `Error handling category select in guild ${interaction.guild!.id}: ${error}`;
+      Logger.error(errorMsg);
+      WebhookLogger.logError(
+        "TicketCategorySelect",
+        errorMsg,
+        (error as Error).stack || null,
+        interaction.user.id,
+        interaction.values[0] || "unknown",
+      );
+      await interaction.reply({
         embeds: [
           Embeds.error(
             "Error",
-            "An error occurred while processing your selection.",
+            "An error occurred while processing your selection. Please try again or contact an administrator.",
           ),
         ],
+        ephemeral: true,
       });
     }
   }
@@ -464,8 +538,9 @@ export class TicketInteractionHandler {
     await interaction.deferReply({ ephemeral: true });
 
     try {
+      const ticketId = interaction.customId.replace("ticket_close_", "");
       const ticket = await Ticket.findOne({
-        ticketId: interaction.customId.replace("ticket_close_", ""),
+        ticketId: ticketId,
         guildId: interaction.guild!.id,
       });
 
@@ -505,105 +580,97 @@ export class TicketInteractionHandler {
         return;
       }
 
-      await ticket.updateOne({ status: TicketStatus.CLOSED });
-
       const channel = interaction.guild!.channels.cache.get(
         ticket.channelId,
       ) as TextChannel;
 
-      if (channel) {
-        await channel.send({
-          embeds: [
-            Embeds.success(
-              "Ticket Closed",
-              `Ticket closed by ${interaction.user}. Use \`/ticket reopen\` to reopen it if needed.`,
-            ),
-          ],
+      if (!channel) {
+        await interaction.editReply({
+          embeds: [Embeds.error("Error", "Could not find the ticket channel.")],
         });
+        return;
       }
 
+      // Get messages for transcript before closing
+      const messages = await channel.messages.fetch({ limit: 100 });
+      const messageArray = Array.from(messages.values()).reverse();
+
+      // Generate transcripts
+      const jsonTranscript = this.generateTranscript(
+        ticket,
+        messageArray,
+        interaction.guild!.name,
+      );
+      const logTranscript = this.generateLogTranscript(
+        ticket,
+        messageArray,
+        interaction.guild!.name,
+      );
+
+      // Create transcript file
+      const transcriptAttachment = new AttachmentBuilder(
+        Buffer.from(JSON.stringify(jsonTranscript, null, 2)),
+        { name: `transcript-${ticket.ticketId}.json` },
+      );
+
+      // Send transcript to log channel if configured
+      if (config.logChannelId) {
+        const logChannel = interaction.guild!.channels.cache.get(
+          config.logChannelId,
+        ) as TextChannel;
+
+        if (logChannel) {
+          await logChannel.send({
+            embeds: [
+              Embeds.info(
+                "Ticket Closed",
+                "A ticket has been closed.",
+              ).addFields([
+                {
+                  name: "Ticket ID",
+                  value: ticket.ticketId,
+                  inline: true,
+                },
+                {
+                  name: "Closed By",
+                  value: interaction.user.tag,
+                  inline: true,
+                },
+                {
+                  name: "Created By",
+                  value: ticket.authorName,
+                  inline: true,
+                },
+              ]),
+            ],
+            files: [transcriptAttachment],
+            content: logTranscript,
+          });
+        }
+      }
+
+      // Update ticket status and close info
+      await ticket.updateOne({
+        status: TicketStatus.CLOSED,
+        closedBy: interaction.user.id,
+        closedAt: new Date(),
+      });
+
+      // Delete the channel immediately
+      await channel.delete(`Ticket closed by ${interaction.user.tag}`);
+
       await interaction.editReply({
-        embeds: [Embeds.success("Success", "The ticket has been closed.")],
+        embeds: [
+          Embeds.success(
+            "Success",
+            "The ticket has been closed and archived. A transcript has been saved.",
+          ),
+        ],
       });
     } catch (error) {
       Logger.error(`Error closing ticket: ${error}`);
       await interaction.editReply({
         embeds: [Embeds.error("Error", "Failed to close the ticket.")],
-      });
-    }
-  }
-
-  private async handleReopenTicket(
-    interaction: ButtonInteraction,
-  ): Promise<void> {
-    await interaction.deferReply({ ephemeral: true });
-
-    try {
-      const ticket = await Ticket.findOne({
-        ticketId: interaction.customId.replace("ticket_reopen_", ""),
-        guildId: interaction.guild!.id,
-      });
-
-      if (!ticket) {
-        await interaction.editReply({
-          embeds: [
-            Embeds.error("Error", "Could not find the ticket to reopen."),
-          ],
-        });
-        return;
-      }
-
-      const member = interaction.member as GuildMember;
-      const config = await TicketConfig.findByGuild(interaction.guild!.id);
-
-      if (!config) {
-        await interaction.editReply({
-          embeds: [Embeds.error("Error", "Ticket configuration not found.")],
-        });
-        return;
-      }
-
-      const canReopen =
-        member.permissions.has(PermissionFlagsBits.Administrator) ||
-        config.supportRoles.some((roleId) => member.roles.cache.has(roleId)) ||
-        ticket.authorId === interaction.user.id;
-
-      if (!canReopen) {
-        await interaction.editReply({
-          embeds: [
-            Embeds.error(
-              "No Permission",
-              "You don't have permission to reopen this ticket.",
-            ),
-          ],
-        });
-        return;
-      }
-
-      await ticket.updateOne({ status: TicketStatus.OPEN });
-
-      const channel = interaction.guild!.channels.cache.get(
-        ticket.channelId,
-      ) as TextChannel;
-
-      if (channel) {
-        await channel.send({
-          embeds: [
-            Embeds.success(
-              "Ticket Reopened",
-              `Ticket reopened by ${interaction.user}.`,
-            ),
-          ],
-        });
-      }
-
-      await interaction.editReply({
-        embeds: [Embeds.success("Success", "The ticket has been reopened.")],
-      });
-    } catch (error) {
-      Logger.error(`Error reopening ticket: ${error}`);
-      await interaction.editReply({
-        embeds: [Embeds.error("Error", "Failed to reopen the ticket.")],
       });
     }
   }

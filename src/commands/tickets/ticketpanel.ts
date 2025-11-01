@@ -38,11 +38,18 @@ export const command: ICommand = {
       return;
     }
 
+    let config: any;
     try {
+      Logger.info(
+        `Processing ticketpanel command from ${interaction.user.tag} in guild ${interaction.guild.id}`,
+      );
       await interaction.deferReply({ flags: 64 });
 
       const targetChannel = (interaction.options.getChannel("channel") ||
         interaction.channel) as TextChannel;
+      Logger.debug(
+        `Target channel: ${targetChannel.name} (${targetChannel.id})`,
+      );
 
       if (!targetChannel || targetChannel.type !== ChannelType.GuildText) {
         await interaction.editReply({
@@ -72,9 +79,16 @@ export const command: ICommand = {
 
       // Get or create ticket configuration
       let config = await TicketConfig.findByGuild(interaction.guild.id);
+      Logger.debug(`Existing config found: ${config ? "yes" : "no"}`);
 
       if (!config) {
+        Logger.info(
+          `Creating default ticket config for guild ${interaction.guild.id}`,
+        );
         config = await TicketConfig.createDefault(interaction.guild.id);
+        Logger.debug(
+          `Default config categories: ${Array.from(config.categories.keys()).join(", ")}`,
+        );
         Logger.info(
           `Created default ticket config for guild ${interaction.guild.id}`,
         );
@@ -94,6 +108,15 @@ export const command: ICommand = {
 
       // Create the ticket panel
       const ticketService = TicketService.getInstance();
+      Logger.debug(
+        `Creating ticket panel with ${config.categories.size} categories`,
+      );
+      Logger.debug(
+        `Available categories: ${Array.from(config.categories.entries())
+          .map(([id, cat]) => `${id}:${cat.name}`)
+          .join(", ")}`,
+      );
+
       const panelMessage = await ticketService.createTicketPanel(
         interaction.guild,
         targetChannel,
@@ -138,6 +161,14 @@ export const command: ICommand = {
       );
     } catch (error) {
       Logger.error(`Error in ticketpanel command: ${error}`);
+      Logger.debug(`Error stack: ${(error as Error).stack}`);
+      Logger.debug(
+        `Config state: ${
+          config
+            ? JSON.stringify(Array.from(config.categories.entries()))
+            : "no config"
+        }`,
+      );
 
       const errorEmbed = Embeds.error(
         "Command Error",

@@ -62,7 +62,6 @@ export interface ITicket extends Document {
   closedBy?: string;
   closedAt?: Date;
   closeReason?: string;
-  reopenCount: number;
   lastActivity: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -126,7 +125,6 @@ const TicketSchema = new Schema({
   closedBy: { type: String },
   closedAt: { type: Date },
   closeReason: { type: String, maxlength: 500 },
-  reopenCount: { type: Number, default: 0 },
   lastActivity: { type: Date, default: Date.now },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
@@ -281,16 +279,6 @@ TicketSchema.methods.assignTo = function (userId: string, assignedBy: string) {
   this.assignedTo = userId;
   this.assignedBy = assignedBy;
   this.assignedAt = new Date();
-  this.lastActivity = new Date();
-  return this.save();
-};
-
-TicketSchema.methods.reopen = function () {
-  this.status = TicketStatus.OPEN;
-  this.reopenCount += 1;
-  this.closedBy = undefined;
-  this.closedAt = undefined;
-  this.closeReason = undefined;
   this.lastActivity = new Date();
   return this.save();
 };

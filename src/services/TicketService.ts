@@ -225,37 +225,29 @@ export class TicketService {
 
       const channel = guild.channels.cache.get(ticket.channelId) as TextChannel;
 
-      await Ticket.deleteOne({
-        ticketId: ticket.ticketId,
-        guildId: ticket.guildId,
-      });
-      +Logger.debug(
-        `Attempting to delete ticket ${ticket.ticketId} from database`,
-      );
-      +(+Logger.debug(`Ticket ${ticket.ticketId} deleted from database`));
-
       if (!channel) {
         Logger.warn(`Ticket channel ${ticket.channelId} not found`);
         // Update ticket status anyway
         ticket.status = TicketStatus.CLOSED;
         ticket.closedBy = closedBy.id;
         ticket.closedAt = new Date();
+        ticket.closeReason = reason;
         await ticket.save();
         return true;
       }
 
-      // Generate transcript if enabled and requested
-      let transcriptUrl: string | null = null;
-      if (generateTranscript && config.transcript.enabled) {
-        transcriptUrl = await this.generateTranscript(channel, ticket, config);
-      }
-
-      // Update ticket status
+      // Update ticket status BEFORE generating transcript so closedBy/closedAt are present
       ticket.status = TicketStatus.CLOSED;
       ticket.closedBy = closedBy.id;
       ticket.closedAt = new Date();
       ticket.closeReason = reason;
       await ticket.save();
+
+      // Generate transcript if enabled and requested (now that ticket has closed fields)
+      let transcriptUrl: string | null = null;
+      if (generateTranscript && config.transcript.enabled) {
+        transcriptUrl = await this.generateTranscript(channel, ticket, config);
+      }
 
       // Send closing message
       const embed = new EmbedBuilder()
@@ -548,6 +540,14 @@ export class TicketService {
       // Fetch messages for the transcript
       const messages = await this.fetchAllMessages(channel);
       const totalMessages = messages.length;
+      // Debug: log closedBy / closedAt so we can trace why transcript shows N/A
+      try {
+        Logger.debug(
+          `generateTranscript: ticket=${ticket.ticketId} closedBy=${ticket.closedBy ?? "N/A"} closedAt=${ticket.closedAt ? ticket.closedAt.toISOString() : "N/A"}`,
+        );
+      } catch {
+        // no-op if Logger.debug is not available for some reason
+      }
 
       // Human friendly dates
       const createdAtFull = ticket.createdAt
@@ -594,12 +594,23 @@ export class TicketService {
         `• Created: ${createdRelative}`,
       ].join("\n");
 
+      // Resolve closedBy username/tag for nicer display in the summary embed
+      let closedByTag = "N/A";
+      if (ticket.closedBy) {
+        try {
+          const cbUser = await channel.client.users.fetch(ticket.closedBy);
+          closedByTag = cbUser?.tag ?? ticket.closedBy;
+        } catch {
+          closedByTag = ticket.closedBy;
+        }
+      }
+
       const infoValue = [
         `• ID: ${ticket.ticketId}`,
         `• Subject: ${ticket.subject ?? "N/A"}`,
         `• Category: ${ticket.category ?? "N/A"}`,
         `• Created by: ${ticket.authorName ?? "N/A"}`,
-        `• Closed by: ${ticket.closedBy ?? "N/A"}`,
+        `• Closed by: ${closedByTag}`,
       ].join("\n");
 
       const statsValue = [
@@ -619,8 +630,8 @@ export class TicketService {
         );
 
       // Decide where to send the embed + transcript file: prefer configured log channel.
-      // Important: do NOT post the summary embed into the ticket channel to avoid duplicate/old embeds;
-      // send the summary embed only to the configured log channel.
+      // Important: do NOT post the summary embed or the transcript file into the ticket channel itself.
+      // If configured logChannelId equals the ticket channel id, skip sending the summary to avoid duplicates.
       const guild = channel.guild;
       let logChannel: TextChannel | undefined;
       try {
@@ -631,7 +642,17 @@ export class TicketService {
             (maybeLog as any).isTextBased &&
             maybeLog.isTextBased()
           ) {
-            logChannel = maybeLog as TextChannel;
+            // If the configured log channel is the same as the ticket channel, do not use it for the summary.
+            if ((maybeLog as any).id === channel.id) {
+              try {
+                Logger.debug(
+                  `generateTranscript: configured logChannelId (${config.logChannelId}) is the same as the ticket channel (${channel.id}); skipping summary send to prevent duplicate embeds.`,
+                );
+              } catch {}
+              logChannel = undefined;
+            } else {
+              logChannel = maybeLog as TextChannel;
+            }
           }
         }
       } catch {
@@ -639,41 +660,18 @@ export class TicketService {
         logChannel = undefined;
       }
 
-      // Send transcript file to the ticket channel (so users have immediate access).
+      // Default placeholder URL (used if we can't upload)
       let attachmentUrl = `https://transcripts.example.com/${ticket.ticketId}.txt`;
-      try {
-        const sentFile = (await channel.send({
-          files: [
-            {
-              attachment: Buffer.from(transcript, "utf-8"),
-              name: `${ticket.ticketId}.txt`,
-            },
-          ],
-        })) as Message;
 
-        // Try to read the uploaded file URL
-        const firstAttachment = (sentFile.attachments as any).first?.();
-        if (firstAttachment && firstAttachment.url) {
-          attachmentUrl = firstAttachment.url;
-        } else if ((sentFile.attachments as any).first) {
-          // Node typings may differ; attempt alternate property access
-          const alt = (sentFile.attachments as any).first();
-          if (alt && alt.url) {
-            attachmentUrl = alt.url;
-          }
-        }
-      } catch (sendErr) {
-        // If sending to ticket channel fails, log and fallback to placeholder URL
-        Logger.warn(
-          `Failed to send transcript attachment to ticket channel for ticket ${ticket.ticketId}: ${sendErr}`,
-        );
-      }
-
-      // Send summary embed (and optional transcript file) to the log channel only (if configured).
-      // This ensures the ticket channel won't show the summary embed and avoids duplicate/old embeds.
-      try {
-        if (logChannel) {
-          await logChannel.send({
+      // If a log channel is configured, send the summary embed and transcript file there only.
+      if (logChannel) {
+        try {
+          try {
+            Logger.debug(
+              `generateTranscript: sending transcript summary to log channel ${logChannel.id} for ticket ${ticket.ticketId}`,
+            );
+          } catch {}
+          const sent = (await logChannel.send({
             embeds: [embed],
             files: [
               {
@@ -681,12 +679,31 @@ export class TicketService {
                 name: `${ticket.ticketId}.txt`,
               },
             ],
-          });
+          })) as Message;
+
+          // Try to read the uploaded file URL from the log channel message
+          const firstAttachment = (sent.attachments as any).first?.();
+          if (firstAttachment && firstAttachment.url) {
+            attachmentUrl = firstAttachment.url;
+          }
+          try {
+            Logger.debug(
+              `generateTranscript: successfully sent transcript summary to log channel ${logChannel.id} for ticket ${ticket.ticketId}`,
+            );
+          } catch {}
+        } catch (sendErr) {
+          Logger.warn(
+            `Failed to send transcript embed/attachment to log channel for ticket ${ticket.ticketId}: ${sendErr}`,
+          );
         }
-      } catch (logErr) {
-        Logger.warn(
-          `Failed to send transcript embed to log channel for ticket ${ticket.ticketId}: ${logErr}`,
-        );
+      } else {
+        // No log channel configured -> do NOT post the embed or file into the ticket channel.
+        // Return the placeholder URL so downstream logic can include a link if needed.
+        try {
+          Logger.debug(
+            `No logChannelId configured; skipping posting transcript embed/file for ticket ${ticket.ticketId}`,
+          );
+        } catch {}
       }
 
       return attachmentUrl;

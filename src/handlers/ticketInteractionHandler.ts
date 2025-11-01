@@ -274,6 +274,17 @@ export class TicketInteractionHandler {
         });
         return;
       }
+      // Mark ticket closed BEFORE generating the transcript so closedBy/closedAt are present
+      // in the ticket data when the transcript is produced.
+      const closeDate = new Date();
+      await ticket.updateOne({
+        status: TicketStatus.CLOSED,
+        closedBy: interaction.user.id,
+        closedAt: closeDate,
+      });
+      // Update local ticket object so subsequent operations see the closed fields
+      ticket.closedBy = interaction.user.id;
+      ticket.closedAt = closeDate;
 
       // Use centralized TicketService.generateTranscript which:
       // - uploads the transcript file to the ticket channel (so participants can download it),
@@ -281,7 +292,6 @@ export class TicketInteractionHandler {
       // and returns a transcript URL (or placeholder). This prevents duplicate/old embeds appearing
       // in the ticket channel.
       const config = await TicketConfig.findByGuild(interaction.guild!.id);
-
       let transcriptUrl: string | null = null;
       try {
         // TicketService.generateTranscript expects the ticket channel (TextChannel), ticket model and config.
@@ -300,12 +310,6 @@ export class TicketInteractionHandler {
       // The TicketService already handled posting the summary to the log channel (if configured).
       // Optionally, add the transcript URL to the closing embed (if available) — the close flow below
       // already checks transcriptUrl when building the closing embed.
-
-      await ticket.updateOne({
-        status: TicketStatus.CLOSED,
-        closedBy: interaction.user.id,
-        closedAt: new Date(),
-      });
 
       await channel.delete(`Ticket closed by ${interaction.user.tag}`);
       await interaction.editReply({

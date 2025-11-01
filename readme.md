@@ -69,7 +69,7 @@ Kaoruko Bot Next is a comprehensive Discord bot offering advanced moderation too
    ```bash
    # Development mode (with hot reload)
    bun run dev
-   
+
    # Production mode
    bun run build
    bun start
@@ -346,10 +346,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Need Help?** 
-- 📖 [Documentation](https://docs.example.com) (coming soon)
-- 💬 [Discord Support Server](https://discord.gg/example) (coming soon)
-- 🐛 [Issue Tracker](https://github.com/your-repo/issues)
-- 📧 [Contact Us](mailto:support@example.com)
+**Need Help?**
+- 📖 [Documentation](coming soon)
+- 💬 [Discord Support Server](https://discord.gg/cYZPfXcBGB)
+- 🐛 [Issue Tracker](https://github.com/kmmiio99o/Kaoruko-Bot-Next/issues/new)
 
 > **⚠️ Note**: This bot requires proper Discord permissions to function correctly. Always test in a development server before production deployment.

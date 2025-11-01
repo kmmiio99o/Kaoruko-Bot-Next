@@ -124,21 +124,73 @@ export class WebhookLogger {
     if (!this.webhookClient) return;
 
     try {
-      const embed = new EmbedBuilder()
-        .setTitle("Bot Started")
-        .setColor(0x0000ff)
-        .addFields(
-          { name: "Bot", value: botName, inline: true },
-          { name: "Guilds", value: guildCount.toString(), inline: true },
-          { name: "Users", value: userCount.toString(), inline: true },
-        )
-        .setTimestamp();
+      // Collect runtime diagnostics
+      const uptimeSec = Math.floor(process.uptime() || 0);
+      const hours = Math.floor(uptimeSec / 3600);
+      const mins = Math.floor((uptimeSec % 3600) / 60);
+      const secs = uptimeSec % 60;
+      const uptimeReadable = `${hours}h ${mins}m ${secs}s`;
 
+      const mem = process.memoryUsage ? process.memoryUsage() : null;
+      const heapMB = mem ? (mem.heapUsed / 1024 / 1024).toFixed(2) : "N/A";
+      const rssMB = mem ? (mem.rss / 1024 / 1024).toFixed(2) : "N/A";
+
+      const pid = process.pid?.toString() ?? "N/A";
+      const platform = process.platform ?? "unknown";
+      const arch = process.arch ?? "unknown";
+      const nodeVersion = process.version ?? "unknown";
+      const bunVersion =
+        typeof (process as any).versions === "object" &&
+        (process as any).versions?.bun
+          ? (process as any).versions.bun
+          : undefined;
+      const runtime = bunVersion ? `bun ${bunVersion}` : `node ${nodeVersion}`;
+      const env = process.env.NODE_ENV ?? "unknown";
+      const hostname =
+        process.env.HOSTNAME ?? process.env.COMPUTERNAME ?? "unknown";
+
+      const embed = new EmbedBuilder()
+        .setTitle("🚀 Bot Started")
+        .setColor(0x0066cc)
+        .setDescription(`Instance \`${botName}\` is up and running`)
+        .addFields(
+          {
+            name: "Summary",
+            value: `• Guilds: **${guildCount}**\n• Users: **${userCount}**`,
+            inline: true,
+          },
+          {
+            name: "Runtime",
+            value: `• PID: \`${pid}\`\n• Runtime: ${runtime}\n• Env: \`${env}\``,
+            inline: true,
+          },
+          {
+            name: "Uptime / Memory",
+            value: `• Uptime: **${uptimeReadable}**\n• Heap: **${heapMB} MB**\n• RSS: **${rssMB} MB**`,
+            inline: false,
+          },
+          {
+            name: "Host",
+            value: `• Hostname: \`${hostname}\`\n• Platform: \`${platform}\` • Arch: \`${arch}\``,
+            inline: true,
+          },
+        )
+        .setTimestamp()
+        .setFooter({ text: `Startup at ${new Date().toLocaleString()}` });
+
+      // Add a subtle success username & avatar for clarity
       await this.webhookClient.send({
         embeds: [embed],
         username: "Bot Status Logger",
         avatarURL: "https://cdn.discordapp.com/embed/avatars/1.png",
       });
+
+      // Also log locally for quick console visibility
+      try {
+        Logger.info(
+          `Bot Started: ${botName} — guilds=${guildCount} users=${userCount} uptime=${uptimeReadable} pid=${pid} runtime=${runtime}`,
+        );
+      } catch {}
     } catch (webhookError) {
       Logger.error(`Failed to send startup webhook log: ${webhookError}`);
     }

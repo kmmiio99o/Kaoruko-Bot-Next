@@ -194,39 +194,18 @@ function getUptime(): string {
 }
 
 client.on("interactionCreate", async (interaction: any) => {
-  // Handle button interactions for tickets
-  if (interaction.isButton() && interaction.customId.startsWith("ticket_")) {
-    try {
-      await ticketHandler.handleTicketInteraction(interaction);
-    } catch (error) {
-      Logger.error("Error handling ticket button interaction:" + ": " + error);
-    }
-    return;
-  }
-
-  // Handle string select menu for ticket categories
   if (
-    interaction.isStringSelectMenu() &&
-    interaction.customId === "ticket_category_select"
+    (interaction.isButton() && interaction.customId.startsWith("ticket_")) ||
+    (interaction.isStringSelectMenu() &&
+      interaction.customId === "ticket_category_select") ||
+    (interaction.isModalSubmit() &&
+      (interaction.customId.startsWith("ticket_") ||
+        interaction.customId.startsWith("close_reason_")))
   ) {
     try {
-      await ticketHandler.handleCategorySelect(interaction);
+      await ticketHandler.handleInteraction(interaction);
     } catch (error) {
-      Logger.error("Error handling ticket category selection:" + ": " + error);
-    }
-    return;
-  }
-
-  // Handle modal submissions for tickets
-  if (
-    interaction.isModalSubmit() &&
-    (interaction.customId.startsWith("ticket_") ||
-      interaction.customId.startsWith("close_reason_"))
-  ) {
-    try {
-      await ticketHandler.handleModalSubmit(interaction);
-    } catch (error) {
-      Logger.error("Error handling ticket modal submission:" + ": " + error);
+      Logger.error("Error handling ticket interaction:" + ": " + error);
     }
     return;
   }

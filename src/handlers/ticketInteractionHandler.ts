@@ -275,36 +275,31 @@ export class TicketInteractionHandler {
         return;
       }
 
-      const messages = await channel.messages.fetch({ limit: 100 });
-      const transcript = this.generateTranscript(
-        ticket,
-        Array.from(messages.values()).reverse(),
-      );
-
+      // Use centralized TicketService.generateTranscript which:
+      // - uploads the transcript file to the ticket channel (so participants can download it),
+      // - sends a nicely formatted summary embed to the configured log channel (if present),
+      // and returns a transcript URL (or placeholder). This prevents duplicate/old embeds appearing
+      // in the ticket channel.
       const config = await TicketConfig.findByGuild(interaction.guild!.id);
-      if (config?.logChannelId) {
-        const logChannel = interaction.guild!.channels.cache.get(
-          config.logChannelId,
-        ) as TextChannel;
-        if (logChannel) {
-          const transcriptAttachment = new AttachmentBuilder(
-            Buffer.from(transcript),
-            { name: `transcript-${ticket.ticketId}.txt` },
-          );
-          await logChannel.send({
-            embeds: [
-              Embeds.info(
-                "Ticket Closed",
-                `Transcript for ticket #${ticket.ticketId}`,
-              ).addFields(
-                { name: "Subject", value: ticket.subject },
-                { name: "Category", value: ticket.category },
-              ),
-            ],
-            files: [transcriptAttachment],
-          });
-        }
+
+      let transcriptUrl: string | null = null;
+      try {
+        // TicketService.generateTranscript expects the ticket channel (TextChannel), ticket model and config.
+        // It will handle sending the summary to log channel and uploading the transcript file.
+        transcriptUrl = await TicketService.getInstance().generateTranscript(
+          channel,
+          ticket,
+          config!,
+        );
+      } catch (err) {
+        Logger.warn(
+          `Failed to generate transcript via TicketService for ticket ${ticket.ticketId}: ${err}`,
+        );
       }
+
+      // The TicketService already handled posting the summary to the log channel (if configured).
+      // Optionally, add the transcript URL to the closing embed (if available) — the close flow below
+      // already checks transcriptUrl when building the closing embed.
 
       await ticket.updateOne({
         status: TicketStatus.CLOSED,

@@ -534,37 +534,162 @@ export class TicketService {
 
   /**
    * Generate transcript
+   *
+   * Produces a nicely formatted transcript file, sends a summary embed (to the log channel
+   * if available, otherwise to the ticket channel), uploads the transcript as an attachment
+   * and returns the URL to the uploaded transcript attachment (or a placeholder if upload fails).
    */
-  private async generateTranscript(
+  public async generateTranscript(
     channel: TextChannel,
     ticket: ITicket,
     config: ITicketConfig,
   ): Promise<string | null> {
     try {
-      // This is a simplified transcript generation
-      // In a real implementation, you might use a proper transcript service
+      // Fetch messages for the transcript
       const messages = await this.fetchAllMessages(channel);
+      const totalMessages = messages.length;
 
-      let transcript = "";
+      // Human friendly dates
+      const createdAtFull = ticket.createdAt
+        ? ticket.createdAt.toLocaleString()
+        : "N/A";
+      const closedAtFull = ticket.closedAt
+        ? ticket.closedAt.toLocaleString()
+        : "N/A";
+      const createdRelative = ticket.createdAt
+        ? `<t:${Math.floor(ticket.createdAt.getTime() / 1000)}:R>`
+        : "N/A";
+
+      // Build transcript text (plain text file)
+      let transcript = `Ticket Transcript - ${ticket.ticketId}\n\n`;
+      transcript += `=== Ticket Details ===\n`;
       transcript += `Ticket ID: ${ticket.ticketId}\n`;
-      transcript += `Created: ${ticket.createdAt.toISOString()}\n`;
-      transcript += `Author: ${ticket.authorName}\n`;
-      transcript += `Category: ${ticket.category}\n`;
-      transcript += `Status: ${ticket.status}\n`;
-      transcript += `\n--- Messages ---\n\n`;
+      transcript += `Subject: ${ticket.subject ?? "N/A"}\n`;
+      transcript += `Category: ${ticket.category ?? "N/A"}\n`;
+      transcript += `Created by: ${ticket.authorName ?? "N/A"}\n`;
+      transcript += `Created: ${createdAtFull} (${createdRelative})\n`;
+      transcript += `Closed by: ${ticket.closedBy ?? "N/A"}\n\n`;
+      transcript += `=== Messages (${totalMessages}) ===\n\n`;
 
       for (const message of messages) {
         transcript += `[${message.createdAt.toISOString()}] ${message.author.tag}: ${message.content}\n`;
-        if (message.attachments.size > 0) {
+        if (message.attachments && message.attachments.size > 0) {
           for (const attachment of message.attachments.values()) {
             transcript += `  📎 Attachment: ${attachment.url}\n`;
           }
         }
       }
 
-      // In a real implementation, you'd upload this to a file hosting service
-      // For now, we'll just return a placeholder URL
-      return `https://transcripts.example.com/${ticket.ticketId}.txt`;
+      transcript += `\n=== Statistics ===\n`;
+      transcript += `Total messages: ${totalMessages}\n`;
+      transcript += `Created At: ${createdAtFull}\n`;
+      transcript += `Closed At: ${closedAtFull}\n`;
+
+      // Build an embed summary that mirrors the user's requested layout
+      const detailsValue = [
+        `• Ticket ID: ${ticket.ticketId}`,
+        `• Subject: ${ticket.subject ?? "N/A"}`,
+        `• Category: ${ticket.category ?? "N/A"}`,
+        `• Created by: ${ticket.authorName ?? "N/A"}`,
+        `• Created: ${createdRelative}`,
+      ].join("\n");
+
+      const infoValue = [
+        `• ID: ${ticket.ticketId}`,
+        `• Subject: ${ticket.subject ?? "N/A"}`,
+        `• Category: ${ticket.category ?? "N/A"}`,
+        `• Created by: ${ticket.authorName ?? "N/A"}`,
+        `• Closed by: ${ticket.closedBy ?? "N/A"}`,
+      ].join("\n");
+
+      const statsValue = [
+        `• Total messages: ${totalMessages}`,
+        `• Created At: ${createdAtFull}`,
+        `• Closed At: ${closedAtFull}`,
+      ].join("\n");
+
+      const embed = new EmbedBuilder()
+        .setTitle("Ticket Transcript Summary")
+        .setColor("#2F3136")
+        .setTimestamp()
+        .addFields(
+          { name: "📑 Ticket Details", value: detailsValue, inline: false },
+          { name: "Ticket Info", value: infoValue, inline: false },
+          { name: "Statistics", value: statsValue, inline: false },
+        );
+
+      // Decide where to send the embed + transcript file: prefer configured log channel.
+      // Important: do NOT post the summary embed into the ticket channel to avoid duplicate/old embeds;
+      // send the summary embed only to the configured log channel.
+      const guild = channel.guild;
+      let logChannel: TextChannel | undefined;
+      try {
+        if (config.logChannelId) {
+          const maybeLog = guild.channels.cache.get(config.logChannelId);
+          if (
+            maybeLog &&
+            (maybeLog as any).isTextBased &&
+            maybeLog.isTextBased()
+          ) {
+            logChannel = maybeLog as TextChannel;
+          }
+        }
+      } catch {
+        // If resolving log channel fails, leave logChannel undefined and continue.
+        logChannel = undefined;
+      }
+
+      // Send transcript file to the ticket channel (so users have immediate access).
+      let attachmentUrl = `https://transcripts.example.com/${ticket.ticketId}.txt`;
+      try {
+        const sentFile = (await channel.send({
+          files: [
+            {
+              attachment: Buffer.from(transcript, "utf-8"),
+              name: `${ticket.ticketId}.txt`,
+            },
+          ],
+        })) as Message;
+
+        // Try to read the uploaded file URL
+        const firstAttachment = (sentFile.attachments as any).first?.();
+        if (firstAttachment && firstAttachment.url) {
+          attachmentUrl = firstAttachment.url;
+        } else if ((sentFile.attachments as any).first) {
+          // Node typings may differ; attempt alternate property access
+          const alt = (sentFile.attachments as any).first();
+          if (alt && alt.url) {
+            attachmentUrl = alt.url;
+          }
+        }
+      } catch (sendErr) {
+        // If sending to ticket channel fails, log and fallback to placeholder URL
+        Logger.warn(
+          `Failed to send transcript attachment to ticket channel for ticket ${ticket.ticketId}: ${sendErr}`,
+        );
+      }
+
+      // Send summary embed (and optional transcript file) to the log channel only (if configured).
+      // This ensures the ticket channel won't show the summary embed and avoids duplicate/old embeds.
+      try {
+        if (logChannel) {
+          await logChannel.send({
+            embeds: [embed],
+            files: [
+              {
+                attachment: Buffer.from(transcript, "utf-8"),
+                name: `${ticket.ticketId}.txt`,
+              },
+            ],
+          });
+        }
+      } catch (logErr) {
+        Logger.warn(
+          `Failed to send transcript embed to log channel for ticket ${ticket.ticketId}: ${logErr}`,
+        );
+      }
+
+      return attachmentUrl;
     } catch (error) {
       Logger.error(
         `Failed to generate transcript for ticket ${ticket.ticketId}: ${error}`,

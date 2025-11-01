@@ -1,23 +1,132 @@
 import { WebhookClient, EmbedBuilder } from "discord.js";
-import { Logger } from "./logger";
+import { Logger, LoggerEvents } from "./logger";
+
+/**
+ * WebhookLogger
+ *
+ * Changes made:
+ * - Startup webhook (logStartup) has been disabled (no-op).
+ * - Command usage logging remains a no-op.
+ * - Optional forwarding of Logger.warn and Logger.error to the webhook is supported via
+ *   environment variables WEBHOOK_WARNINGS=true and WEBHOOK_ERRORS=true.
+ * - To avoid recursion when forwarding Logger.error, original Logger methods are captured
+ *   and used for local logging inside this module.
+ */
 
 export class WebhookLogger {
   private static webhookClient: WebhookClient | null = null;
+
+  // Preserve original logger functions to avoid recursion when we patch Logger
+  private static originalLoggerError =
+    (Logger as any).error?.bind(Logger) ?? ((msg: string) => {});
+  private static originalLoggerWarn =
+    (Logger as any).warn?.bind(Logger) ?? ((msg: string) => {});
+  private static originalLoggerInfo =
+    (Logger as any).info?.bind(Logger) ?? ((msg: string) => {});
 
   static initialize() {
     const webhookUrl = process.env.WEBHOOK_URL;
     if (webhookUrl) {
       try {
         this.webhookClient = new WebhookClient({ url: webhookUrl });
-        Logger.info("Webhook logger initialized successfully");
+        // Use original info logger so we don't trigger forwarding here
+        try {
+          this.originalLoggerInfo("Webhook logger initialized successfully");
+        } catch {}
+
+        // Controlled by env vars:
+        // - By default forwarding is ENABLED. Set the env var to 'false' to disable.
+        // - WEBHOOK_WARNINGS=false to disable forwarding of warnings (enabled by default)
+        // - WEBHOOK_ERRORS=false to disable forwarding of errors (enabled by default)
+        const forwardWarnings = process.env.WEBHOOK_WARNINGS !== "false";
+        const forwardErrors = process.env.WEBHOOK_ERRORS !== "false";
+
+        // Subscribe to LoggerEvents to forward console-level warns/errors to the webhook.
+        // This avoids patching Logger methods directly and prevents accidental recursion.
+        if (forwardWarnings) {
+          try {
+            LoggerEvents.on("warn", (message: string) => {
+              try {
+                // Keep local logging behavior via preserved original logger
+                WebhookLogger.originalLoggerWarn(String(message));
+              } catch {}
+
+              // Fire-and-forget to webhook
+              try {
+                WebhookLogger.logWarning(
+                  "Runtime Warning",
+                  String(message),
+                ).catch(() => {});
+              } catch {}
+            });
+
+            try {
+              this.originalLoggerInfo(
+                "Logger.warn forwarding to webhook enabled via LoggerEvents (default or WEBHOOK_WARNINGS!=false)",
+              );
+            } catch {}
+          } catch (err) {
+            try {
+              this.originalLoggerError(
+                `Failed to enable LoggerEvents warn forwarding: ${err}`,
+              );
+            } catch {}
+          }
+        }
+
+        if (forwardErrors) {
+          try {
+            LoggerEvents.on("error", (message: string) => {
+              try {
+                // Keep local logging behavior via preserved original logger
+                WebhookLogger.originalLoggerError(String(message));
+              } catch {}
+
+              // Fire-and-forget: send a minimal error report to webhook
+              try {
+                WebhookLogger.logError(
+                  "RuntimeError",
+                  String(message),
+                  null,
+                  null,
+                  null,
+                ).catch(() => {});
+              } catch {}
+            });
+
+            try {
+              this.originalLoggerInfo(
+                "Logger.error forwarding to webhook enabled via LoggerEvents (default or WEBHOOK_ERRORS!=false)",
+              );
+            } catch {}
+          } catch (err) {
+            try {
+              this.originalLoggerError(
+                `Failed to enable LoggerEvents error forwarding: ${err}`,
+              );
+            } catch {}
+          }
+        }
       } catch (error) {
-        Logger.error(`Failed to initialize webhook logger: ${error}`);
+        try {
+          this.originalLoggerError(
+            `Failed to initialize webhook logger: ${error}`,
+          );
+        } catch {}
       }
     } else {
-      Logger.warn("WEBHOOK_URL not found in environment variables");
+      try {
+        this.originalLoggerWarn(
+          "WEBHOOK_URL not found in environment variables",
+        );
+      } catch {}
     }
   }
 
+  /**
+   * Command usage logging intentionally disabled to respect privacy.
+   * Method kept to preserve existing call sites.
+   */
   static async logCommandUsage(
     commandName: string,
     userId: string,
@@ -28,46 +137,64 @@ export class WebhookLogger {
     isSuccess: boolean = true,
     error: string | null = null,
   ) {
+    // NO-OP
+    return;
+  }
+
+  /**
+   * Log a warning to the configured webhook.
+   * Only sends if WEBHOOK_WARNINGS=true.
+   */
+  static async logWarning(
+    warningType: string,
+    message: string,
+    userId: string | null = null,
+    commandName: string | null = null,
+  ) {
     if (!this.webhookClient) return;
+    if (process.env.WEBHOOK_WARNINGS === "false") return;
 
     try {
       const embed = new EmbedBuilder()
-        .setTitle("Command Executed")
-        .setColor(isSuccess ? 0x00ff00 : 0xff0000)
+        .setTitle("Bot Warning")
+        .setColor(0xffff00)
         .addFields(
-          { name: "Command", value: `\`${commandName}\``, inline: true },
-          { name: "User", value: `${userTag} (${userId})`, inline: true },
+          { name: "Type", value: warningType, inline: true },
           {
-            name: "Location",
-            value: guildName ? `${guildName} (${guildId})` : "DM",
-            inline: true,
-          },
-          { name: "Channel", value: channelId, inline: true },
-          {
-            name: "Status",
-            value: isSuccess ? "✅ Success" : "❌ Failed",
-            inline: true,
+            name: "Message",
+            value: String(message).substring(0, 1024),
+            inline: false,
           },
         )
         .setTimestamp();
 
-      if (error) {
-        embed.addFields({
-          name: "Error",
-          value: `\`\`\`${error.substring(0, 1000)}\`\`\``,
-        });
+      if (userId) {
+        embed.addFields({ name: "User", value: userId, inline: true });
+      }
+
+      if (commandName) {
+        embed.addFields({ name: "Command", value: commandName, inline: true });
       }
 
       await this.webhookClient.send({
         embeds: [embed],
-        username: "Bot Command Logger",
-        avatarURL: "https://cdn.discordapp.com/embed/avatars/0.png",
+        username: "Bot Warning Logger",
+        avatarURL: "https://cdn.discordapp.com/embed/avatars/2.png",
       });
     } catch (webhookError) {
-      Logger.error(`Failed to send webhook log: ${webhookError}`);
+      // Use original logger to avoid recursion
+      try {
+        WebhookLogger.originalLoggerError(
+          `Failed to send warning webhook log: ${webhookError}`,
+        );
+      } catch {}
     }
   }
 
+  /**
+   * Log an error to the configured webhook.
+   * This function will not call Logger.error for its internal failures to prevent recursion.
+   */
   static async logError(
     errorType: string,
     errorMessage: string,
@@ -85,7 +212,7 @@ export class WebhookLogger {
           { name: "Type", value: errorType, inline: true },
           {
             name: "Message",
-            value: errorMessage.substring(0, 1024),
+            value: String(errorMessage).substring(0, 1024),
             inline: false,
           },
         )
@@ -102,7 +229,7 @@ export class WebhookLogger {
       if (stackTrace) {
         embed.addFields({
           name: "Stack Trace",
-          value: `\`\`\`${stackTrace.substring(0, 1000)}\`\`\``,
+          value: `\`\`\`${String(stackTrace).substring(0, 1000)}\`\`\``,
         });
       }
 
@@ -112,7 +239,12 @@ export class WebhookLogger {
         avatarURL: "https://cdn.discordapp.com/embed/avatars/4.png",
       });
     } catch (webhookError) {
-      Logger.error(`Failed to send error webhook log: ${webhookError}`);
+      // Use original logger to avoid recursion
+      try {
+        WebhookLogger.originalLoggerError(
+          `Failed to send error webhook log: ${webhookError}`,
+        );
+      } catch {}
     }
   }
 
@@ -121,79 +253,7 @@ export class WebhookLogger {
     guildCount: number,
     userCount: number,
   ) {
-    if (!this.webhookClient) return;
-
-    try {
-      // Collect runtime diagnostics
-      const uptimeSec = Math.floor(process.uptime() || 0);
-      const hours = Math.floor(uptimeSec / 3600);
-      const mins = Math.floor((uptimeSec % 3600) / 60);
-      const secs = uptimeSec % 60;
-      const uptimeReadable = `${hours}h ${mins}m ${secs}s`;
-
-      const mem = process.memoryUsage ? process.memoryUsage() : null;
-      const heapMB = mem ? (mem.heapUsed / 1024 / 1024).toFixed(2) : "N/A";
-      const rssMB = mem ? (mem.rss / 1024 / 1024).toFixed(2) : "N/A";
-
-      const pid = process.pid?.toString() ?? "N/A";
-      const platform = process.platform ?? "unknown";
-      const arch = process.arch ?? "unknown";
-      const nodeVersion = process.version ?? "unknown";
-      const bunVersion =
-        typeof (process as any).versions === "object" &&
-        (process as any).versions?.bun
-          ? (process as any).versions.bun
-          : undefined;
-      const runtime = bunVersion ? `bun ${bunVersion}` : `node ${nodeVersion}`;
-      const env = process.env.NODE_ENV ?? "unknown";
-      const hostname =
-        process.env.HOSTNAME ?? process.env.COMPUTERNAME ?? "unknown";
-
-      const embed = new EmbedBuilder()
-        .setTitle("🚀 Bot Started")
-        .setColor(0x0066cc)
-        .setDescription(`Instance \`${botName}\` is up and running`)
-        .addFields(
-          {
-            name: "Summary",
-            value: `• Guilds: **${guildCount}**\n• Users: **${userCount}**`,
-            inline: true,
-          },
-          {
-            name: "Runtime",
-            value: `• PID: \`${pid}\`\n• Runtime: ${runtime}\n• Env: \`${env}\``,
-            inline: true,
-          },
-          {
-            name: "Uptime / Memory",
-            value: `• Uptime: **${uptimeReadable}**\n• Heap: **${heapMB} MB**\n• RSS: **${rssMB} MB**`,
-            inline: false,
-          },
-          {
-            name: "Host",
-            value: `• Hostname: \`${hostname}\`\n• Platform: \`${platform}\` • Arch: \`${arch}\``,
-            inline: true,
-          },
-        )
-        .setTimestamp()
-        .setFooter({ text: `Startup at ${new Date().toLocaleString()}` });
-
-      // Add a subtle success username & avatar for clarity
-      await this.webhookClient.send({
-        embeds: [embed],
-        username: "Bot Status Logger",
-        avatarURL: "https://cdn.discordapp.com/embed/avatars/1.png",
-      });
-
-      // Also log locally for quick console visibility
-      try {
-        Logger.info(
-          `Bot Started: ${botName} — guilds=${guildCount} users=${userCount} uptime=${uptimeReadable} pid=${pid} runtime=${runtime}`,
-        );
-      } catch {}
-    } catch (webhookError) {
-      Logger.error(`Failed to send startup webhook log: ${webhookError}`);
-    }
+    return;
   }
 }
 

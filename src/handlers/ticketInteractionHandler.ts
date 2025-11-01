@@ -309,93 +309,103 @@ export class TicketInteractionHandler {
     messages: Message[],
     guildName: string,
   ): string {
-    const transcript = {
-      metadata: {
-        guildName,
-        generatedAt: new Date().toISOString(),
-        messageCount: messages.length,
-      },
-      ticket: {
-        id: ticket.ticketId,
-        subject: ticket.subject,
-        category: ticket.category,
-        status: ticket.status,
-        createdAt: ticket.createdAt.toISOString(),
-        author: ticket.authorName,
-      },
-      messages: messages.map((msg) => ({
-        author: {
-          id: msg.author.id,
-          username: msg.author.username,
-          discriminator: msg.author.discriminator,
-        },
-        content: msg.content || "",
-        timestamp: msg.createdAt.toISOString(),
-        attachments: Array.from(msg.attachments.values()).map((att) => ({
-          name: att.name,
-          url: att.url,
-          size: att.size,
-        })),
-      })),
-    };
+    const formatTimestamp = (date: Date) => date.toISOString();
+    const transcriptLines: string[] = [];
 
-    return JSON.stringify(transcript, null, 2);
+    // Header
+    transcriptLines.push(`Ticket Transcript for ticket-${ticket.ticketId}`);
+    transcriptLines.push(
+      `Created by: ${ticket.authorName} (${ticket.authorId})`,
+    );
+    if (ticket.closedBy && ticket.closedAt) {
+      transcriptLines.push(
+        `Closed by: ${ticket.closedBy} (${formatTimestamp(
+          new Date(ticket.closedAt),
+        )})`,
+      );
+    }
+    transcriptLines.push(`Date: ${new Date().toISOString()}`);
+    transcriptLines.push(`──────────────────────────────────────────────────`);
+    transcriptLines.push(``); // Empty line for spacing
+
+    // Message History
+    messages.forEach((msg) => {
+      const timestamp = formatTimestamp(msg.createdAt);
+      const authorTag = `${msg.author.username}${
+        msg.author.discriminator !== "0" ? `#${msg.author.discriminator}` : ""
+      }`;
+      transcriptLines.push(`[${timestamp}] ${authorTag}: ${msg.content || ""}`);
+
+      if (msg.attachments.size > 0) {
+        msg.attachments.forEach((att) => {
+          transcriptLines.push(`[Attachment: ${att.url}]`);
+        });
+      }
+      if (msg.embeds.length > 0) {
+        transcriptLines.push(`[Embedded content]`);
+      }
+      transcriptLines.push(``); // Empty line for spacing between messages
+    });
+
+    return transcriptLines.join("\n");
   }
 
   private generateLogTranscript(
     ticket: any,
-    messages: Message[],
+    _messages: Message[],
     guildName: string,
   ): string {
     const formatTimestamp = (date: Date) =>
-      `<t:${Math.floor(date.getTime() / 1000)}:F>`;
+      `<t:${Math.floor(date.getTime() / 1000)}:R>`;
 
-    let logTranscript = `## Ticket Information\n`;
-    logTranscript += `**Guild:** ${guildName}\n`;
-    logTranscript += `**ID:** ${ticket.ticketId}\n`;
-    logTranscript += `**Subject:** ${ticket.subject}\n`;
-    logTranscript += `**Category:** ${ticket.category}\n`;
-    logTranscript += `**Status:** ${ticket.status}\n`;
-    logTranscript += `**Created:** ${formatTimestamp(ticket.createdAt)}\n`;
-    logTranscript += `**Author:** ${ticket.authorName}\n\n`;
+    let log = `# Ticket Transcript Summary\n\n`;
 
-    logTranscript += `## Messages (${messages.length})\n\n`;
+    // Ticket header
+    log += `## 📑 Ticket Details\n\n`;
+    log += `• **Ticket ID:** \`${ticket.ticketId}\`\n`;
+    log += `• **Subject:** ${ticket.subject || "*No subject*"}\n`;
+    log += `• **Category:** ${ticket.category || "*No category*"}\n`;
+    log += `• **Created by:** ${ticket.authorName}\n`;
+    log += `• **Created:** ${formatTimestamp(ticket.createdAt)}\n`;
+    if (ticket.closedAt) {
+      log += `• **Closed:** ${formatTimestamp(ticket.closedAt)}\n`;
+    }
+    if (ticket.reopenCount > 0) {
+      log += `• **Times reopened:** ${ticket.reopenCount}\n`;
+    }
 
-    messages.forEach((msg) => {
-      logTranscript += `### ${msg.author.username} (${formatTimestamp(
-        msg.createdAt,
-      )})\n`;
-      logTranscript += msg.content ? `${msg.content}\n` : "*No content*\n";
+    return log;
+  }
 
-      if (msg.attachments.size > 0) {
-        logTranscript += "\n**Attachments:**\n";
-        msg.attachments.forEach((att) => {
-          logTranscript += `- 📎 [${att.name}](${att.url}) (${Math.round(
-            att.size / 1024,
-          )}KB)\n`;
-        });
-      }
-      logTranscript += "\n";
-    });
+  private formatFileSize(bytes: number): string {
+    const units = ["B", "KB", "MB", "GB"];
+    let size = bytes;
+    let unitIndex = 0;
 
-    return logTranscript;
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024;
+      unitIndex++;
+    }
+
+    return `${Math.round(size * 10) / 10}${units[unitIndex]}`;
   }
 
   async handleModalSubmit(interaction: ModalSubmitInteraction): Promise<void> {
-    if (!interaction.customId.startsWith("ticket_modal_")) {
-      return;
-    }
-
-    const categoryId = interaction.customId.replace(
-      "ticket_modal_",
-      "",
-    ) as TicketCategory;
-    const subject = interaction.fields.getTextInputValue("ticket_subject");
-    const description =
-      interaction.fields.getTextInputValue("ticket_description");
-
     try {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ flags: 64 });
+
+      if (!interaction.customId.startsWith("ticket_modal_")) {
+        return; // Ignore modals that aren't for ticket creation
+      }
+
+      const categoryId = interaction.customId.replace(
+        "ticket_modal_",
+        "",
+      ) as TicketCategory;
+      const subject = interaction.fields.getTextInputValue("ticket_subject");
+      const description =
+        interaction.fields.getTextInputValue("ticket_description");
+
       const result = await this.ticketService.createTicket(
         interaction.guild!,
         interaction.user,
@@ -409,25 +419,38 @@ export class TicketInteractionHandler {
           embeds: [
             Embeds.success(
               "Ticket Created",
-              `Your ticket has been created: ${result.channel}`,
+              `Your ticket has been created: <#${result.channel.id}>`,
             ),
           ],
         });
+        Logger.info(
+          `Ticket ${result.ticket.ticketId} created in guild ${interaction.guild!.id} by user ${interaction.user.id}`,
+        ); // Log the ticket creation
       } else {
         await interaction.editReply({
           embeds: [Embeds.error("Creation Failed", "Failed to create ticket.")],
         });
+        Logger.error(
+          `Failed to create ticket in guild ${interaction.guild!.id} by user ${interaction.user.id}`,
+        ); // Log ticket creation failure
       }
-    } catch (error) {
+    } catch (error: any) {
       Logger.error(`Error creating ticket: ${error}`);
       await interaction.editReply({
         embeds: [
           Embeds.error(
             "Error",
-            "An error occurred while creating your ticket.",
+            `An error occurred while creating your ticket: ${error.message}`,
           ),
         ],
       });
+      WebhookLogger.logError(
+        "TicketCreateError",
+        "handleModalSubmit",
+        `Error creating ticket in guild ${interaction.guild!.id} by user ${interaction.user.id}`,
+        error.stack || null,
+        interaction.user.id,
+      );
     }
   }
 
@@ -609,8 +632,8 @@ export class TicketInteractionHandler {
 
       // Create transcript file
       const transcriptAttachment = new AttachmentBuilder(
-        Buffer.from(JSON.stringify(jsonTranscript, null, 2)),
-        { name: `transcript-${ticket.ticketId}.json` },
+        Buffer.from(jsonTranscript),
+        { name: `transcript-${ticket.ticketId}.txt` },
       );
 
       // Send transcript to log channel if configured
@@ -622,29 +645,31 @@ export class TicketInteractionHandler {
         if (logChannel) {
           await logChannel.send({
             embeds: [
-              Embeds.info(
-                "Ticket Closed",
-                "A ticket has been closed.",
-              ).addFields([
-                {
-                  name: "Ticket ID",
-                  value: ticket.ticketId,
-                  inline: true,
-                },
-                {
-                  name: "Closed By",
-                  value: interaction.user.tag,
-                  inline: true,
-                },
-                {
-                  name: "Created By",
-                  value: ticket.authorName,
-                  inline: true,
-                },
-              ]),
+              Embeds.info("Ticket Closed", "📝 Ticket transcript saved")
+                .addFields([
+                  {
+                    name: "Ticket Info",
+                    value: [
+                      `• ID: \`${ticket.ticketId}\``,
+                      `• Subject: ${ticket.subject || "*No subject*"}`,
+                      `• Category: ${ticket.category || "*No category*"}`,
+                    ].join("\n"),
+                    inline: false,
+                  },
+                  {
+                    name: "Users",
+                    value: [
+                      `• Created by: ${ticket.authorName}`,
+                      `• Closed by: ${interaction.user.tag}`,
+                      `• Total messages: ${messages.size}`,
+                    ].join("\n"),
+                    inline: false,
+                  },
+                ])
+                .setDescription(logTranscript) // Use the full logTranscript as the embed description
+                .setTimestamp(),
             ],
             files: [transcriptAttachment],
-            content: logTranscript,
           });
         }
       }

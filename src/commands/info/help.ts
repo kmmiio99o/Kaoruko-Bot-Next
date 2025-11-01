@@ -152,7 +152,7 @@ export const command: ICommand = {
       embed.addFields({
         name: "Links",
         value:
-          "[Support Server](https://discord.gg/support) | [Invite Bot](https://discord.com/oauth2/authorize)",
+          "[Support Server](https://discord.gg/cYZPfXcBGB) | [Invite Bot](https://discord.com/oauth2/authorize?client_id=1398003581512056854&permissions=1101726338055&integration_type=0&scope=bot)",
         inline: false,
       });
 

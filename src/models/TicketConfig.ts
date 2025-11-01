@@ -1,5 +1,5 @@
 import mongoose, { Document, Schema } from "mongoose";
-import { TicketCategory, TicketPriority } from "./Ticket";
+import { TicketCategory } from "./Ticket";
 
 export interface ITicketCategoryConfig {
   name: string;

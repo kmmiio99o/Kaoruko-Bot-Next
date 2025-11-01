@@ -15,11 +15,7 @@ import {
   GuildMember,
   Collection,
 } from "discord.js";
-import Ticket, {
-  ITicket,
-  TicketStatus,
-  TicketPriority,
-} from "../models/Ticket";
+import Ticket, { ITicket, TicketStatus } from "../models/Ticket";
 import TicketConfig, { ITicketConfig } from "../models/TicketConfig";
 import { Logger } from "../utils/logger";
 import { Embeds } from "../utils/embeds";
@@ -147,7 +143,6 @@ export class TicketService {
         authorName: user.tag,
         subject: subject || `${category} Support`,
         category,
-        priority: TicketPriority.NORMAL,
         status: TicketStatus.OPEN,
         description,
         users: [
@@ -687,7 +682,6 @@ export class TicketService {
       .addFields(
         { name: "Ticket ID", value: ticket.ticketId, inline: true },
         { name: "Category", value: ticket.category, inline: true },
-        { name: "Priority", value: ticket.priority, inline: true },
         {
           name: "Created",
           value: `<t:${Math.floor(ticket.createdAt.getTime() / 1000)}:F>`,
@@ -721,12 +715,7 @@ export class TicketService {
       // Only mention support roles, not admin roles
       config.supportRoles.forEach((roleId) => rolesToMention.add(roleId));
 
-      if (rolesToMention.size > 0) {
-        mentionContent = Array.from(rolesToMention)
-          .map((roleId) => `<@&${roleId}>`)
-          .join(" ");
-        mentionContent += ` A new ticket (${ticket.ticketId}) has been created by ${user}!`;
-      }
+      mentionContent = `A new ticket ${ticket.ticketId} has been created by ${user}!`;
     }
 
     await channel.send({

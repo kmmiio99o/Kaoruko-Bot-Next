@@ -24,13 +24,6 @@ export enum TicketStatus {
   ARCHIVED = "archived",
 }
 
-export enum TicketPriority {
-  LOW = "low",
-  NORMAL = "normal",
-  HIGH = "high",
-  URGENT = "urgent",
-}
-
 export enum TicketCategory {
   GENERAL = "general",
   TECHNICAL = "technical",
@@ -58,7 +51,6 @@ export interface ITicket extends Document {
   authorName: string;
   subject: string;
   category: string;
-  priority: TicketPriority;
   status: TicketStatus;
   description?: string;
   assignedTo?: string;
@@ -118,11 +110,6 @@ const TicketSchema = new Schema({
   category: {
     type: String,
     default: TicketCategory.GENERAL,
-  },
-  priority: {
-    type: String,
-    enum: Object.values(TicketPriority),
-    default: TicketPriority.NORMAL,
   },
   status: {
     type: String,

@@ -2,6 +2,7 @@ import {
   ChatInputCommandInteraction,
   Message,
   PermissionFlagsBits,
+  SlashCommandBuilder,
 } from "discord.js";
 import { Command } from "../../types";
 import { Embeds } from "../../utils/embeds";
@@ -17,80 +18,55 @@ export default {
   usage:
     "/timeout <user> <duration> [reason] or .timeout <user> <duration> [reason]",
   examples: ["/timeout @user 10m spamming", ".timeout @user 10m spamming"],
+  data: new SlashCommandBuilder()
+    .setName("timeout")
+    .setDescription("Timeout a user in the server")
+    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
+    .addUserOption((option) =>
+      option
+        .setName("user")
+        .setDescription("User to timeout")
+        .setRequired(true),
+    )
+    .addStringOption((option) =>
+      option
+        .setName("duration")
+        .setDescription("Duration (e.g., 10m, 2h, 1d)")
+        .setRequired(true),
+    )
+    .addStringOption((option) =>
+      option
+        .setName("reason")
+        .setDescription("Reason for timeout")
+        .setRequired(false),
+    ),
   async run(
     interaction: ChatInputCommandInteraction | undefined,
     message: Message | undefined,
     args: string[] | undefined,
-    commandHandler: any,
   ) {
     try {
-      // Check if this is a slash command or prefix command
-      const isSlashCommand = !!interaction;
+      const isSlash = !!interaction;
 
-      // Validate context (must be in a guild)
-      if (isSlashCommand) {
-        if (!interaction?.guild) {
-          if (interaction) {
-            await interaction.reply({
-              embeds: [
-                Embeds.error(
-                  "Invalid Context",
-                  "This command can only be used in a server.",
-                ),
-              ],
-              flags: [64],
-            });
-          }
-          return;
-        }
-      } else if (message) {
-        if (!message.guild) {
+      // Resolve guild context
+      const guild = (interaction?.guild ?? message?.guild) as any;
+      if (!guild) {
+        if (isSlash) {
+          await interaction!.reply({
+            embeds: [
+              Embeds.error(
+                "Invalid Context",
+                "This command must be used inside a server.",
+              ),
+            ],
+            flags: [64],
+          });
+        } else if (message) {
           await message.reply({
             embeds: [
               Embeds.error(
                 "Invalid Context",
-                "This command can only be used in a server.",
-              ),
-            ],
-          });
-          return;
-        }
-      } else {
-        return; // No valid context
-      }
-
-      // Check permissions
-      let hasPermission = false;
-      if (interaction) {
-        hasPermission =
-          interaction.memberPermissions?.has(
-            PermissionFlagsBits.ModerateMembers,
-          ) || false;
-      } else if (message) {
-        // Fix TypeScript error - use member.permissions instead of message.memberPermissions
-        hasPermission =
-          message.member?.permissions.has(
-            PermissionFlagsBits.ModerateMembers,
-          ) || false;
-      }
-
-      if (!hasPermission) {
-        if (interaction) {
-          await interaction.reply({
-            embeds: [
-              Embeds.error(
-                "Permission Denied",
-                "You need Moderate Members permission to use this command.",
-              ),
-            ],
-            flags: [64],
-          });
-        } else if (message) {
-          await message.reply({
-            embeds: [
-              Embeds.error(
-                "Permission Denied",
-                "You need Moderate Members permission to use this command.",
+                "This command must be used inside a server.",
               ),
             ],
           });
@@ -98,275 +74,236 @@ export default {
         return;
       }
 
-      // Get target user, duration, and reason
-      let targetUser: any;
-      let duration: string | undefined;
-      let reason: string | undefined;
+      // Permission check (Moderate Members)
+      const hasPerm = isSlash
+        ? interaction!.memberPermissions?.has(
+            PermissionFlagsBits.ModerateMembers,
+          )
+        : message!.member?.permissions.has(PermissionFlagsBits.ModerateMembers);
+      if (!hasPerm) {
+        const reply = {
+          embeds: [
+            Embeds.error(
+              "Permission Denied",
+              "You need the **Moderate Members** permission to use this command.",
+            ),
+          ],
+          flags: isSlash ? [64] : undefined,
+        } as any;
+        if (isSlash) await interaction!.reply(reply);
+        else await message!.reply(reply);
+        return;
+      }
 
-      if (interaction) {
-        // Slash command version
-        targetUser = interaction.options.getUser("user", true);
-        duration = interaction.options.getString("duration", true);
-        reason =
-          interaction.options.getString("reason") || "No reason provided";
-      } else if (message && args) {
-        // Prefix command version
-        const userId = args[0]?.replace(/[<@!>]/g, ""); // Remove <@!> from mention
-        duration = args[1];
+      // Parse inputs (target user, duration, reason) for slash and prefix
+      let targetMember: any = null;
+      let targetTag = "Unknown User";
+      let durationStr: string | undefined;
+      let reason = "No reason provided";
 
-        if (!userId || !duration) {
-          await message.reply({
+      if (isSlash) {
+        const user = interaction!.options.getUser("user");
+        durationStr = interaction!.options.getString("duration") ?? undefined;
+        reason = interaction!.options.getString("reason") ?? reason;
+
+        if (!user || !durationStr) {
+          await interaction!.reply({
             embeds: [
               Embeds.error(
                 "Invalid Usage",
-                "Please specify a user and duration.\nUsage: `.timeout <user> <duration> [reason]`",
+                "Usage: /timeout <user> <duration> [reason]",
+              ),
+            ],
+            flags: [64],
+          });
+          return;
+        }
+
+        targetTag = user.tag;
+        try {
+          targetMember = await guild.members.fetch(user.id);
+        } catch {
+          // member not present
+          targetMember = null;
+        }
+      } else {
+        if (!args || args.length < 2) {
+          await message!.reply({
+            embeds: [
+              Embeds.error(
+                "Invalid Usage",
+                "Usage: `.timeout <user> <duration> [reason]`",
               ),
             ],
           });
           return;
         }
 
+        const raw = args[0].replace(/[<@!>]/g, "");
+        durationStr = args[1];
+        reason = args.slice(2).join(" ") || reason;
+
         try {
-          targetUser = await message.guild?.members.fetch(userId);
-          if (!targetUser) {
-            await message.reply({
-              embeds: [
-                Embeds.error(
-                  "User Not Found",
-                  "Could not find that user in this server.",
-                ),
-              ],
-            });
-            return;
-          }
-        } catch (error) {
-          await message.reply({
+          targetMember = await guild.members.fetch(raw);
+          targetTag = targetMember.user?.tag ?? raw;
+        } catch {
+          // If member not found, inform and exit — timeouts require a guild member object
+          await message!.reply({
             embeds: [
               Embeds.error(
                 "User Not Found",
-                "Could not find that user in this server.",
+                "Could not find that user in this server. Timeouts require the user to be a current guild member.",
               ),
             ],
           });
           return;
         }
-
-        reason = args.slice(2).join(" ") || "No reason provided";
-      } else {
-        // Handle invalid usage - neither proper slash command nor prefix command
-        if (message) {
-          await message.reply({
-            embeds: [
-              Embeds.error(
-                "Invalid Usage",
-                "Please specify a user and duration.\nUsage: `.timeout <user> <duration> [reason]`",
-              ),
-            ],
-          });
-        }
-        return;
       }
 
-      // Validate target user
-      if (!targetUser) {
-        if (interaction) {
-          await interaction.reply({
-            embeds: [
-              Embeds.error(
-                "Invalid User",
-                "Please specify a valid user to timeout.",
-              ),
-            ],
+      if (!targetMember) {
+        const msg =
+          "Target user is not a current guild member. Timeouts can only be applied to members present in the server.";
+        if (isSlash)
+          await interaction!.reply({
+            embeds: [Embeds.error("Cannot Timeout", msg)],
             flags: [64],
           });
-        } else if (message) {
-          await message.reply({
-            embeds: [
-              Embeds.error(
-                "Invalid User",
-                "Please specify a valid user to timeout.",
-              ),
-            ],
+        else
+          await message!.reply({
+            embeds: [Embeds.error("Cannot Timeout", msg)],
           });
-        }
         return;
       }
 
-      // Parse duration
-      const durationMs = parseTime(duration || "");
+      // Parse duration using existing helper
+      const durationMs = parseTime(durationStr ?? "");
       if (durationMs <= 0) {
-        if (interaction) {
-          await interaction.reply({
-            embeds: [
-              Embeds.error(
-                "Invalid Duration",
-                "Please provide a valid duration (e.g., 1m, 5h, 1d).\nSupported units: s (seconds), m (minutes), h (hours), d (days)",
-              ),
-            ],
+        const msg =
+          "Please provide a valid duration (e.g., 1m, 5h, 1d). Supported units: s (seconds), m (minutes), h (hours), d (days).";
+        if (isSlash)
+          await interaction!.reply({
+            embeds: [Embeds.error("Invalid Duration", msg)],
             flags: [64],
           });
-        } else if (message) {
-          await message.reply({
-            embeds: [
-              Embeds.error(
-                "Invalid Duration",
-                "Please provide a valid duration (e.g., 1m, 5h, 1d).\nSupported units: s (seconds), m (minutes), h (hours), d (days)",
-              ),
-            ],
+        else
+          await message!.reply({
+            embeds: [Embeds.error("Invalid Duration", msg)],
           });
-        }
         return;
       }
 
-      // Check if duration is within limits (max 28 days)
-      if (durationMs > 2419200000) {
-        // 28 days in milliseconds
-        if (interaction) {
-          await interaction.reply({
-            embeds: [
-              Embeds.error(
-                "Invalid Duration",
-                "Timeout duration cannot exceed 28 days.",
-              ),
-            ],
+      // Discord enforces a 28-day limit for timeouts
+      const maxTimeout = 2419200000; // 28 days in ms
+      if (durationMs > maxTimeout) {
+        const msg = "Timeout duration cannot exceed 28 days.";
+        if (isSlash)
+          await interaction!.reply({
+            embeds: [Embeds.error("Invalid Duration", msg)],
             flags: [64],
           });
-        } else if (message) {
-          await message.reply({
-            embeds: [
-              Embeds.error(
-                "Invalid Duration",
-                "Timeout duration cannot exceed 28 days.",
-              ),
-            ],
+        else
+          await message!.reply({
+            embeds: [Embeds.error("Invalid Duration", msg)],
           });
-        }
         return;
       }
 
-      // Check if target is timeoutable
-      let targetMember: any;
-      if (interaction) {
-        try {
-          targetMember = await interaction.guild?.members.fetch(targetUser.id);
-        } catch (error) {
-          await interaction.reply({
-            embeds: [
-              Embeds.error(
-                "User Not Found",
-                "Could not find that user in this server.",
-              ),
-            ],
+      // Prevent self-timeout and owner/timeouter protections
+      const invokerId = isSlash ? interaction!.user.id : message!.author.id;
+      if (targetMember.id === invokerId) {
+        const msg = "You cannot timeout yourself.";
+        if (isSlash)
+          await interaction!.reply({
+            embeds: [Embeds.error("Invalid Action", msg)],
             flags: [64],
           });
-          return;
-        }
-      } else if (message) {
-        targetMember = targetUser;
+        else
+          await message!.reply({
+            embeds: [Embeds.error("Invalid Action", msg)],
+          });
+        return;
       }
-
-      if (!targetMember?.moderatable) {
-        if (interaction) {
-          await interaction.reply({
-            embeds: [
-              Embeds.error(
-                "Cannot Timeout",
-                "I cannot timeout this user. They may have a higher role than me or be the server owner.",
-              ),
-            ],
+      if (targetMember.id === guild.ownerId) {
+        const msg = "You cannot timeout the server owner.";
+        if (isSlash)
+          await interaction!.reply({
+            embeds: [Embeds.error("Invalid Action", msg)],
             flags: [64],
           });
-        } else if (message) {
-          await message.reply({
-            embeds: [
-              Embeds.error(
-                "Cannot Timeout",
-                "I cannot timeout this user. They may have a higher role than me or be the server owner.",
-              ),
-            ],
+        else
+          await message!.reply({
+            embeds: [Embeds.error("Invalid Action", msg)],
           });
-        }
         return;
       }
 
-      // Perform timeout
+      // Check bot can moderate the member
+      if (!targetMember.moderatable && !targetMember.manageable) {
+        const msg =
+          "I cannot timeout this user. They may have a higher role than me or be the server owner.";
+        if (isSlash)
+          await interaction!.reply({
+            embeds: [Embeds.error("Cannot Timeout", msg)],
+            flags: [64],
+          });
+        else
+          await message!.reply({
+            embeds: [Embeds.error("Cannot Timeout", msg)],
+          });
+        return;
+      }
+
+      // Apply timeout using Discord's API (member.timeout)
       try {
         await targetMember.timeout(durationMs, reason);
 
         const durationFormatted = formatTime(durationMs);
-        if (interaction) {
-          await interaction.reply({
-            embeds: [
-              Embeds.success(
-                "User Timed Out",
-                `${targetUser.tag || targetUser.user?.tag || "Unknown User"} has been timed out for ${durationFormatted}.\n**Reason:** ${reason}`,
-              ),
-            ],
+        const successText = `**${targetTag}** has been timed out for **${durationFormatted}**.\n**Reason:** ${reason}`;
+
+        if (isSlash) {
+          await interaction!.reply({
+            embeds: [Embeds.success("User Timed Out", successText)],
             flags: [64],
           });
-        } else if (message) {
-          await message.reply({
-            embeds: [
-              Embeds.success(
-                "User Timed Out",
-                `${targetUser.tag || targetUser.user?.tag || "Unknown User"} has been timed out for ${durationFormatted}.\n**Reason:** ${reason}`,
-              ),
-            ],
+        } else {
+          await message!.reply({
+            embeds: [Embeds.success("User Timed Out", successText)],
           });
         }
 
-        Logger.logWithContext(
-          "MODERATION",
-          `User ${targetUser.tag || targetUser.user?.tag || "Unknown User"} (${targetUser.id}) timed out for ${durationFormatted} by ${isSlashCommand ? interaction?.user.tag : message?.author.tag}`,
-          "info",
-        );
-      } catch (error: any) {
-        Logger.error(`Error timing out user ${targetUser.id}: ${error}`);
-
-        if (interaction) {
-          await interaction.reply({
-            embeds: [
-              Embeds.error(
-                "Timeout Failed",
-                `Failed to timeout ${targetUser.tag || targetUser.user?.tag || "Unknown User"}: ${error.message || "Unknown error"}`,
-              ),
-            ],
+        try {
+          Logger.logWithContext(
+            "MODERATION",
+            `User ${targetTag} (${targetMember.id}) timed out for ${durationFormatted} by ${isSlash ? interaction!.user.tag : message!.author.tag} — reason: ${reason}`,
+            "info",
+          );
+        } catch {}
+      } catch (err: any) {
+        Logger.error(`Timeout failed for ${targetMember.id}: ${err}`);
+        const errMsg = `Failed to timeout **${targetTag}**: ${err?.message ?? err}`;
+        if (isSlash)
+          await interaction!.reply({
+            embeds: [Embeds.error("Timeout Failed", errMsg)],
             flags: [64],
           });
-        } else if (message) {
-          await message.reply({
-            embeds: [
-              Embeds.error(
-                "Timeout Failed",
-                `Failed to timeout ${targetUser.tag || targetUser.user?.tag || "Unknown User"}: ${error.message || "Unknown error"}`,
-              ),
-            ],
+        else
+          await message!.reply({
+            embeds: [Embeds.error("Timeout Failed", errMsg)],
           });
-        }
       }
     } catch (error: any) {
       Logger.error(`Error in timeout command: ${error}`);
-
-      if (interaction && !interaction.replied && !interaction.deferred) {
-        await interaction.reply({
-          embeds: [
-            Embeds.error(
-              "Command Error",
-              `An error occurred: ${error.message || "Unknown error"}`,
-            ),
-          ],
-          flags: [64],
-        });
-      } else if (message) {
-        await message.reply({
-          embeds: [
-            Embeds.error(
-              "Command Error",
-              `An error occurred: ${error.message || "Unknown error"}`,
-            ),
-          ],
-        });
-      }
+      const payload = {
+        embeds: [
+          Embeds.error(
+            "Command Error",
+            `An error occurred: ${error?.message ?? error}`,
+          ),
+        ],
+      } as any;
+      if (interaction && !interaction.replied && !interaction.deferred)
+        await interaction.reply({ ...payload, flags: [64] });
+      else if (message) await message.reply(payload);
     }
   },
 } as Command;

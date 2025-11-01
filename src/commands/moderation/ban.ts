@@ -2,6 +2,7 @@ import {
   ChatInputCommandInteraction,
   Message,
   PermissionFlagsBits,
+  SlashCommandBuilder,
 } from "discord.js";
 import { Command } from "../../types";
 import { Embeds } from "../../utils/embeds";
@@ -16,286 +17,209 @@ export default {
   prefixCommand: true,
   usage: "/ban <user> [reason] or .ban <user> [reason]",
   examples: ["/ban @user spamming", ".ban @user spamming"],
+  data: new SlashCommandBuilder()
+    .setName("ban")
+    .setDescription("Ban a user from the server")
+    .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
+    .addUserOption((option) =>
+      option.setName("user").setDescription("User to ban").setRequired(true),
+    )
+    .addStringOption((option) =>
+      option
+        .setName("reason")
+        .setDescription("Reason for the ban")
+        .setRequired(false),
+    ),
   async run(
     interaction: ChatInputCommandInteraction | undefined,
     message: Message | undefined,
     args: string[] | undefined,
-    commandHandler: any,
   ) {
     try {
-      // Check if this is a slash command or prefix command
-      const isSlashCommand = !!interaction;
+      const isSlash = !!interaction;
 
-      // Validate context (must be in a guild)
-      if (isSlashCommand) {
-        if (!interaction?.guild) {
-          if (interaction) {
-            await interaction.reply({
-              embeds: [
-                Embeds.error(
-                  "Invalid Context",
-                  "This command can only be used in a server.",
-                ),
-              ],
-              flags: [64],
-            });
-          }
-          return;
-        }
-      } else if (message) {
-        if (!message.guild) {
-          await message.reply({
+      // Ensure guild context
+      const guild = (interaction?.guild ?? message?.guild) as any;
+      if (!guild) {
+        if (isSlash) {
+          await interaction!.reply({
             embeds: [
               Embeds.error(
                 "Invalid Context",
-                "This command can only be used in a server.",
+                "This command can only be used inside a server.",
+              ),
+            ],
+            flags: [64],
+          });
+        } else {
+          await message!.reply({
+            embeds: [
+              Embeds.error(
+                "Invalid Context",
+                "This command can only be used inside a server.",
               ),
             ],
           });
-          return;
         }
+        return;
+      }
+
+      // Permissions check
+      const hasBanPerm = isSlash
+        ? interaction!.memberPermissions?.has(PermissionFlagsBits.BanMembers)
+        : message!.member?.permissions.has(PermissionFlagsBits.BanMembers);
+
+      if (!hasBanPerm) {
+        const reply = {
+          embeds: [
+            Embeds.error(
+              "Permission Denied",
+              "You need the **Ban Members** permission to use this command.",
+            ),
+          ],
+        } as any;
+        if (isSlash) {
+          await interaction!.reply({ ...reply, flags: [64] });
+        } else {
+          await message!.reply(reply);
+        }
+        return;
+      }
+
+      // Resolve target user id and reason
+      let targetId: string | undefined;
+      let reason = "No reason provided";
+      let invokerTag = isSlash ? interaction!.user.tag : message!.author.tag;
+
+      if (isSlash) {
+        const user = interaction!.options.getUser("user", true);
+        targetId = user.id;
+        reason = interaction!.options.getString("reason") ?? reason;
       } else {
-        return; // No valid context
-      }
-
-      // Check permissions
-      let hasPermission = false;
-      if (isSlashCommand && interaction) {
-        hasPermission =
-          interaction.memberPermissions?.has(PermissionFlagsBits.BanMembers) ||
-          false;
-      } else if (message) {
-        // Fix TypeScript error - use member.permissions instead of message.memberPermissions
-        hasPermission =
-          message.member?.permissions.has(PermissionFlagsBits.BanMembers) ||
-          false;
-      }
-
-      if (!hasPermission) {
-        if (isSlashCommand && interaction) {
-          await interaction.reply({
+        if (!args || args.length === 0) {
+          await message!.reply({
             embeds: [
-              Embeds.error(
-                "Permission Denied",
-                "You need Ban Members permission to use this command.",
-              ),
-            ],
-            flags: [64],
-          });
-        } else if (message) {
-          await message.reply({
-            embeds: [
-              Embeds.error(
-                "Permission Denied",
-                "You need Ban Members permission to use this command.",
-              ),
-            ],
-          });
-        }
-        return;
-      }
-
-      // Get target user and reason
-      let targetUser: any;
-      let reason: string | undefined;
-
-      if (interaction) {
-        // Slash command version
-        targetUser = interaction.options.getUser("user", true);
-        reason =
-          interaction.options.getString("reason") || "No reason provided";
-      } else if (message && args) {
-        // Prefix command version
-        const userId = args[0]?.replace(/[<@!>]/g, ""); // Remove <@!> from mention
-        if (!userId) {
-          await message.reply({
-            embeds: [
-              Embeds.error("Invalid User", "Please specify a user to ban."),
+              Embeds.error("Invalid Usage", "Usage: `.ban <user> [reason]`"),
             ],
           });
           return;
         }
+        targetId = args[0].replace(/[<@!>]/g, "");
+        reason = args.slice(1).join(" ") || reason;
+      }
 
-        try {
-          targetUser = await message.guild?.members.fetch(userId);
-          if (!targetUser) {
-            await message.reply({
-              embeds: [
-                Embeds.error(
-                  "User Not Found",
-                  "Could not find that user in this server.",
-                ),
-              ],
-            });
-            return;
-          }
-        } catch (error) {
-          await message.reply({
-            embeds: [
-              Embeds.error(
-                "User Not Found",
-                "Could not find that user in this server.",
-              ),
-            ],
-          });
-          return;
-        }
-
-        reason = args.slice(1).join(" ") || "No reason provided";
-      } else {
-        // Handle invalid usage - neither proper slash command nor prefix command
-        if (message) {
-          await message.reply({
-            embeds: [
-              Embeds.error("Invalid Usage", "Please specify a user to ban."),
-            ],
-          });
-        }
+      if (!targetId) {
+        const reply = {
+          embeds: [
+            Embeds.error("Invalid User", "Please specify a valid user to ban."),
+          ],
+        } as any;
+        if (isSlash) await interaction!.reply({ ...reply, flags: [64] });
+        else await message!.reply(reply);
         return;
       }
 
-      // Validate target user
-      if (!targetUser) {
-        if (interaction) {
-          await interaction.reply({
-            embeds: [
-              Embeds.error(
-                "Invalid User",
-                "Please specify a valid user to ban.",
-              ),
-            ],
-            flags: [64],
-          });
-        } else if (message) {
-          await message.reply({
-            embeds: [
-              Embeds.error(
-                "Invalid User",
-                "Please specify a valid user to ban.",
-              ),
-            ],
-          });
-        }
-        return;
-      }
-
-      // Check if target is bannable
-      let targetMember: any;
-      if (interaction) {
-        try {
-          targetMember = await interaction.guild?.members.fetch(targetUser.id);
-        } catch (error) {
-          // User might not be in the server, but we can still ban them
-          targetMember = null;
-        }
-      } else if (message) {
-        targetMember = targetUser;
-      }
-
-      if (targetMember && !targetMember?.bannable) {
-        if (interaction) {
-          await interaction.reply({
-            embeds: [
-              Embeds.error(
-                "Cannot Ban",
-                "I cannot ban this user. They may have a higher role than me or be the server owner.",
-              ),
-            ],
-            flags: [64],
-          });
-        } else if (message) {
-          await message.reply({
-            embeds: [
-              Embeds.error(
-                "Cannot Ban",
-                "I cannot ban this user. They may have a higher role than me or be the server owner.",
-              ),
-            ],
-          });
-        }
-        return;
-      }
-
-      // Perform ban
+      // Attempt to fetch member for additional checks/logging (may be null if user not in guild)
+      let targetMember = null;
       try {
-        await (interaction?.guild || message?.guild)?.members.ban(
-          targetUser.id,
-          { reason },
-        );
+        targetMember = await guild.members.fetch(targetId);
+      } catch {
+        targetMember = null;
+      }
 
-        if (interaction) {
-          await interaction.reply({
-            embeds: [
-              Embeds.success(
-                "User Banned",
-                `${targetUser.tag || targetUser.user?.tag || "Unknown User"} has been banned.\n**Reason:** ${reason}`,
-              ),
-            ],
+      // Prevent banning server owner or self
+      const invokerId = isSlash ? interaction!.user.id : message!.author.id;
+      if (targetMember && targetMember.id === guild.ownerId) {
+        const msg = "You cannot ban the server owner.";
+        if (isSlash)
+          await interaction!.reply({
+            embeds: [Embeds.error("Invalid Action", msg)],
             flags: [64],
           });
-        } else if (message) {
-          await message.reply({
-            embeds: [
-              Embeds.success(
-                "User Banned",
-                `${targetUser.tag || targetUser.user?.tag || "Unknown User"} has been banned.\n**Reason:** ${reason}`,
-              ),
-            ],
+        else
+          await message!.reply({
+            embeds: [Embeds.error("Invalid Action", msg)],
+          });
+        return;
+      }
+      if (targetId === invokerId) {
+        const msg = "You cannot ban yourself.";
+        if (isSlash)
+          await interaction!.reply({
+            embeds: [Embeds.error("Invalid Action", msg)],
+            flags: [64],
+          });
+        else
+          await message!.reply({
+            embeds: [Embeds.error("Invalid Action", msg)],
+          });
+        return;
+      }
+
+      // If member exists, check if bot can ban them
+      if (targetMember && !targetMember.bannable) {
+        const msg =
+          "I cannot ban this user; they may have a higher role than me or be the server owner.";
+        if (isSlash)
+          await interaction!.reply({
+            embeds: [Embeds.error("Cannot Ban", msg)],
+            flags: [64],
+          });
+        else
+          await message!.reply({ embeds: [Embeds.error("Cannot Ban", msg)] });
+        return;
+      }
+
+      // Perform ban (works with users not present in guild too)
+      try {
+        await guild.members.ban(targetId, { reason });
+
+        const displayTag = (targetMember && targetMember.user?.tag) || targetId;
+        const success = `**${displayTag}** has been banned.\n**Reason:** ${reason}`;
+        if (isSlash) {
+          await interaction!.reply({
+            embeds: [Embeds.success("User Banned", success)],
+            flags: [64],
+          });
+        } else {
+          await message!.reply({
+            embeds: [Embeds.success("User Banned", success)],
           });
         }
 
-        Logger.logWithContext(
-          "MODERATION",
-          `User ${targetUser.tag || targetUser.user?.tag || "Unknown User"} (${targetUser.id}) banned by ${isSlashCommand ? interaction?.user.tag : message?.author.tag}`,
-          "info",
-        );
-      } catch (error: any) {
-        Logger.error(`Error banning user ${targetUser.id}: ${error}`);
-
-        if (interaction) {
-          await interaction.reply({
-            embeds: [
-              Embeds.error(
-                "Ban Failed",
-                `Failed to ban ${targetUser.tag || targetUser.user?.tag || "Unknown User"}: ${error.message || "Unknown error"}`,
-              ),
-            ],
+        try {
+          Logger.logWithContext(
+            "MODERATION",
+            `User ${displayTag} (${targetId}) banned by ${invokerTag} — reason: ${reason}`,
+            "info",
+          );
+        } catch {}
+      } catch (err: any) {
+        Logger.error(`Ban failed for ${targetId}: ${err}`);
+        const errMsg = `Failed to ban **${targetId}**: ${err?.message ?? err}`;
+        if (isSlash)
+          await interaction!.reply({
+            embeds: [Embeds.error("Ban Failed", errMsg)],
             flags: [64],
           });
-        } else if (message) {
-          await message.reply({
-            embeds: [
-              Embeds.error(
-                "Ban Failed",
-                `Failed to ban ${targetUser.tag || targetUser.user?.tag || "Unknown User"}: ${error.message || "Unknown error"}`,
-              ),
-            ],
+        else
+          await message!.reply({
+            embeds: [Embeds.error("Ban Failed", errMsg)],
           });
-        }
       }
     } catch (error: any) {
       Logger.error(`Error in ban command: ${error}`);
-
-      if (interaction && !interaction.replied && !interaction.deferred) {
-        await interaction.reply({
-          embeds: [
-            Embeds.error(
-              "Command Error",
-              `An error occurred: ${error.message || "Unknown error"}`,
-            ),
-          ],
-          flags: [64],
-        });
-      } else if (message) {
-        await message.reply({
-          embeds: [
-            Embeds.error(
-              "Command Error",
-              `An error occurred: ${error.message || "Unknown error"}`,
-            ),
-          ],
-        });
-      }
+      const payload = {
+        embeds: [
+          Embeds.error(
+            "Command Error",
+            `An error occurred: ${error?.message ?? error}`,
+          ),
+        ],
+      } as any;
+      if (interaction && !interaction.replied && !interaction.deferred)
+        await interaction.reply({ ...payload, flags: [64] });
+      else if (message) await message.reply(payload);
     }
   },
 } as Command;

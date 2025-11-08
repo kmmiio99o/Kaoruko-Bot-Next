@@ -20,6 +20,9 @@ import { TicketService } from "../services/TicketService";
 export class TicketInteractionHandler {
   private ticketService: TicketService;
 
+  private closingTickets: Set<string> = new Set();
+  private deletingTickets: Set<string> = new Set();
+
   constructor() {
     this.ticketService = new TicketService();
   }
@@ -76,7 +79,7 @@ export class TicketInteractionHandler {
     try {
       const categoryId = interaction.customId.split("_").slice(2).join("_");
 
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
       const subject = interaction.fields.getTextInputValue("ticket_subject");
       const description =
@@ -137,7 +140,7 @@ export class TicketInteractionHandler {
               "An unexpected error occurred while creating your ticket.",
             ),
           ],
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
     }
@@ -164,7 +167,7 @@ export class TicketInteractionHandler {
               "Ticket system is not configured for this server.",
             ),
           ],
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -183,7 +186,7 @@ export class TicketInteractionHandler {
               "You already have the maximum number of open tickets (3).",
             ),
           ],
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -235,7 +238,7 @@ export class TicketInteractionHandler {
                 "An error occurred while processing your request. Please try again or contact an administrator.",
               ),
             ],
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         } catch (e) {
           Logger.error(`Failed to send error reply: ${e}`);
@@ -248,80 +251,104 @@ export class TicketInteractionHandler {
     interaction: ButtonInteraction,
     ticketId: string,
   ): Promise<void> {
-    try {
-      await interaction.deferReply({ ephemeral: true });
+    if (this.closingTickets.has(ticketId)) {
+      await interaction.reply({
+        embeds: [
+          Embeds.error("In Progress", "This ticket is already being closed."),
+        ],
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
 
+    this.closingTickets.add(ticketId);
+    try {
       const ticket = await Ticket.findOne({
         ticketId,
         guildId: interaction.guild!.id,
       });
 
       if (!ticket) {
-        await interaction.editReply({
+        await interaction.reply({
           embeds: [
             Embeds.error("Error", "Could not find the ticket to close."),
           ],
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
 
-      const channel = interaction.guild!.channels.cache.get(
-        ticket.channelId,
-      ) as TextChannel;
+      const channel = await interaction
+        .guild!.channels.fetch(ticket.channelId)
+        .catch(() => null);
+
       if (!channel) {
-        await interaction.editReply({
-          embeds: [Embeds.error("Error", "Could not find the ticket channel.")],
+        await Ticket.updateOne(
+          { ticketId, guildId: interaction.guild!.id },
+          { status: TicketStatus.CLOSED },
+        );
+        await interaction.reply({
+          embeds: [Embeds.error("Error", "Ticket channel already deleted.")],
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
-      // Mark ticket closed BEFORE generating the transcript so closedBy/closedAt are present
-      // in the ticket data when the transcript is produced.
-      const closeDate = new Date();
-      await ticket.updateOne({
-        status: TicketStatus.CLOSED,
-        closedBy: interaction.user.id,
-        closedAt: closeDate,
-      });
-      // Update local ticket object so subsequent operations see the closed fields
-      ticket.closedBy = interaction.user.id;
-      ticket.closedAt = closeDate;
 
-      // Use centralized TicketService.generateTranscript which:
-      // - uploads the transcript file to the ticket channel (so participants can download it),
-      // - sends a nicely formatted summary embed to the configured log channel (if present),
-      // and returns a transcript URL (or placeholder). This prevents duplicate/old embeds appearing
-      // in the ticket channel.
-      const config = await TicketConfig.findByGuild(interaction.guild!.id);
-      let transcriptUrl: string | null = null;
+      // Acknowledge the interaction immediately.
+      await interaction.reply({
+        embeds: [
+          Embeds.success("Success", "The ticket is being closed and archived."),
+        ],
+        flags: MessageFlags.Ephemeral,
+      });
+
+      // Perform background tasks.
       try {
-        // TicketService.generateTranscript expects the ticket channel (TextChannel), ticket model and config.
-        // It will handle sending the summary to log channel and uploading the transcript file.
-        transcriptUrl = await TicketService.getInstance().generateTranscript(
-          channel,
-          ticket,
-          config!,
-        );
-      } catch (err) {
-        Logger.warn(
-          `Failed to generate transcript via TicketService for ticket ${ticket.ticketId}: ${err}`,
+        const closeDate = new Date();
+        await ticket.updateOne({
+          status: TicketStatus.CLOSED,
+          closedBy: interaction.user.id,
+          closedAt: closeDate,
+        });
+        ticket.closedBy = interaction.user.id;
+        ticket.closedAt = closeDate;
+
+        const config = await TicketConfig.findByGuild(interaction.guild!.id);
+        if (config) {
+          await TicketService.getInstance()
+            .generateTranscript(channel as TextChannel, ticket, config)
+            .catch((err) =>
+              Logger.warn(
+                `Failed to generate transcript for ticket ${ticket.ticketId}: ${err}`,
+              ),
+            );
+        }
+
+        // Delay deletion to ensure other operations complete
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await channel.delete(`Ticket closed by ${interaction.user.tag}`);
+      } catch (error: any) {
+        Logger.error(
+          `Error during ticket close background tasks for ${ticketId}: ${error.message}`,
         );
       }
-
-      // The TicketService already handled posting the summary to the log channel (if configured).
-      // Optionally, add the transcript URL to the closing embed (if available) — the close flow below
-      // already checks transcriptUrl when building the closing embed.
-
-      await channel.delete(`Ticket closed by ${interaction.user.tag}`);
-      await interaction.editReply({
-        embeds: [
-          Embeds.success("Success", "The ticket has been closed and archived."),
-        ],
-      });
     } catch (error: any) {
-      Logger.error(`Error closing ticket: ${error.message}`);
-      await interaction.editReply({
-        embeds: [Embeds.error("Error", "Failed to close the ticket.")],
-      });
+      Logger.error(`Error in handleCloseTicket: ${error.message}`);
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction
+          .reply({
+            embeds: [
+              Embeds.error(
+                "Error",
+                "An unexpected error occurred while closing the ticket.",
+              ),
+            ],
+            flags: MessageFlags.Ephemeral,
+          })
+          .catch((e) => Logger.error(`Failed to send final error reply: ${e}`));
+      }
+    } finally {
+      this.closingTickets.delete(ticketId);
     }
   }
 
@@ -329,40 +356,73 @@ export class TicketInteractionHandler {
     interaction: ButtonInteraction,
     ticketId: string,
   ): Promise<void> {
+    if (this.deletingTickets.has(ticketId)) {
+      await interaction.reply({
+        embeds: [
+          Embeds.error("In Progress", "This ticket is already being deleted."),
+        ],
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+    this.deletingTickets.add(ticketId);
     try {
-      await interaction.deferReply({ ephemeral: true });
-
       const ticket = await Ticket.findOne({
         ticketId,
         guildId: interaction.guild!.id,
       });
 
       if (!ticket) {
-        await interaction.editReply({
+        await interaction.reply({
           embeds: [
             Embeds.error("Error", "Could not find the ticket to delete."),
           ],
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
 
-      const channel = interaction.guild!.channels.cache.get(
-        ticket.channelId,
-      ) as TextChannel;
-      if (channel) {
-        await channel.delete(`Ticket deleted by ${interaction.user.tag}`);
+      // Acknowledge the interaction immediately.
+      await interaction.reply({
+        embeds: [Embeds.success("Success", "The ticket is being deleted.")],
+        flags: MessageFlags.Ephemeral,
+      });
+
+      // Perform background tasks.
+      try {
+        const channel = await interaction
+          .guild!.channels.fetch(ticket.channelId)
+          .catch(() => null);
+
+        await ticket.deleteOne();
+
+        if (channel) {
+          // Delay deletion to ensure other operations complete
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          await channel.delete(`Ticket deleted by ${interaction.user.tag}`);
+        }
+      } catch (error: any) {
+        Logger.error(
+          `Error during ticket delete background tasks for ${ticketId}: ${error.message}`,
+        );
       }
-
-      await ticket.deleteOne();
-
-      await interaction.editReply({
-        embeds: [Embeds.success("Success", "The ticket has been deleted.")],
-      });
     } catch (error: any) {
-      Logger.error(`Error deleting ticket: ${error.message}`);
-      await interaction.editReply({
-        embeds: [Embeds.error("Error", "Failed to delete the ticket.")],
-      });
+      Logger.error(`Error in handleDeleteTicket: ${error.message}`);
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction
+          .reply({
+            embeds: [
+              Embeds.error(
+                "Error",
+                "An unexpected error occurred while deleting the ticket.",
+              ),
+            ],
+            flags: MessageFlags.Ephemeral,
+          })
+          .catch((e) => Logger.error(`Failed to send final error reply: ${e}`));
+      }
+    } finally {
+      this.deletingTickets.delete(ticketId);
     }
   }
 

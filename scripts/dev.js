@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// Kaoruko Bot Development Script
+// Kaoruko Bot Development Script - Refactored for pnpm, tsc, and esbuild with nodemon
 console.log(
   "\x1b[36m╔══════════════════════════════════════════════════════════════════════════════════════════════════╗",
 );
@@ -17,14 +17,14 @@ console.log(
   "\x1b[36m║                              🌐 Built-in Web Dashboard Included 🌐                              ║",
 );
 console.log(
-  "\x1b[36m║                                  ⚡ Powered by Bun ⚡                                           ║",
+  "\x1b[36m║                                  ⚡ Powered by pnpm & esbuild ⚡                                 ║",
 );
 console.log(
   "\x1b[36m╚══════════════════════════════════════════════════════════════════════════════════════════════════╝\x1b[0m",
 );
 console.log("");
 
-const { exec } = require("child_process");
+const { exec, spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
@@ -54,19 +54,37 @@ function log(message, type = "info") {
   );
 }
 
-// Check if bun is available
-log("🔍 Checking bun installation...", "info");
-exec("bun --version", (error, stdout) => {
-  if (error) {
-    log("❌ Bun is not installed or not available in PATH", "error");
-    log("💡 Please install bun from https://bun.sh", "info");
-    process.exit(1);
-  }
-  log(`⚡ Using bun version: ${stdout.trim()}`, "success");
-  startDevelopment();
-});
+// Function to execute shell commands with promises and logging
+function runCommand(command, errorMessage, options = {}) {
+  return new Promise((resolve, reject) => {
+    log(`Executing: ${command}`, "debug");
+    const child = exec(command, options);
 
-function startDevelopment() {
+    child.stdout.on("data", (data) => {
+      process.stdout.write(`\x1b[36m${data}\x1b[0m`);
+    });
+
+    child.stderr.on("data", (data) => {
+      process.stderr.write(`\x1b[31m${data}\x1b[0m`);
+    });
+
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(`${errorMessage} (Exit code: ${code})`));
+      }
+    });
+
+    child.on("error", (error) => {
+      reject(
+        new Error(`Failed to start command "${command}": ${error.message}`),
+      );
+    });
+  });
+}
+
+async function startDevelopment() {
   // Clean dist folder
   log("🧹 Cleaning build directory...", "info");
 
@@ -76,6 +94,7 @@ function startDevelopment() {
       log("✅ Clean completed successfully", "success");
     } catch (error) {
       log(`❌ Failed to clean dist directory: ${error.message}`, "error");
+      process.exit(1);
     }
   } else {
     log("✅ No dist directory to clean", "success");
@@ -103,12 +122,12 @@ function startDevelopment() {
         skipLibCheck: true,
         forceConsistentCasingInFileNames: true,
         resolveJsonModule: true,
-        declaration: true,
-        declarationMap: true,
+        declaration: false, // Declarations will not be generated in dev mode
+        declarationMap: false,
         sourceMap: true,
         experimentalDecorators: true,
         emitDecoratorMetadata: true,
-        types: ["bun-types"],
+        types: ["node"], // Ensure Node.js types are available
         allowImportingTsExtensions: false,
       },
       include: ["src/**/*"],
@@ -123,53 +142,40 @@ function startDevelopment() {
       log("✅ Created default tsconfig.json", "success");
     } catch (error) {
       log(`❌ Failed to create tsconfig.json: ${error.message}`, "error");
+      process.exit(1);
     }
   }
 
-  // Check source directory
-  log("📂 Checking source directory...", "info");
-  if (!fs.existsSync("./src")) {
-    log("❌ Source directory (src/) not found!", "error");
+  // Validate entry point
+  log("📂 Checking source entry point...", "info");
+  const entryPoint = "./src/index.ts";
+  if (!fs.existsSync(entryPoint)) {
     log(
-      "💡 Please create the src/ directory with your TypeScript files",
-      "info",
+      `❌ Source entry point (${entryPoint}) not found! Cannot start development.`,
+      "error",
     );
     process.exit(1);
   }
+  log(`✅ Found entry point: ${entryPoint}`, "success");
 
-  // Count source files
-  function countSourceFiles(dir) {
-    if (!fs.existsSync(dir)) return 0;
-
-    let count = 0;
-    const files = fs.readdirSync(dir, { withFileTypes: true });
-
-    for (const file of files) {
-      const fullPath = path.join(dir, file.name);
-      if (file.isDirectory()) {
-        count += countSourceFiles(fullPath);
-      } else if (
-        file.isFile() &&
-        (file.name.endsWith(".ts") || file.name.endsWith(".tsx"))
-      ) {
-        count++;
-      }
-    }
-
-    return count;
+  // Initial type check
+  log("Starting initial TypeScript type checking with tsc --noEmit...", "info");
+  try {
+    await runCommand(
+      "pnpm exec tsc --noEmit",
+      "Initial TypeScript type checking failed!",
+    );
+    log("Initial TypeScript type checking completed successfully.", "success");
+  } catch (error) {
+    log(`❌ ${error.message}`, "error");
+    console.log("\n\x1b[31m╔══════════════════════════════════════╗");
+    console.log("\x1b[31m║        DEV FAILED (Type Errors)      ║");
+    console.log("\x1b[31m╚══════════════════════════════════════╝\x1b[0m");
+    process.exit(1);
   }
 
-  const sourceFileCount = countSourceFiles("./src");
-  log(`📄 Found ${sourceFileCount} TypeScript source files`, "info");
-
-  if (sourceFileCount === 0) {
-    log("⚠️  No TypeScript files found in src/ directory!", "warn");
-    log("💡 Make sure your .ts files are in the src/ directory", "info");
-  }
-
-  // Use bun's built-in watch mode for development
-  log("🚀 Starting bot in development mode with bun...", "info");
-  log("⚡ Using bun's built-in hot reloading", "success");
+  log("🚀 Starting bot in development mode with nodemon...", "info");
+  log("🔄 Auto-restart on file changes enabled.", "success");
   log("🌐 Web dashboard will be available at http://localhost:3000", "info");
   log(
     "📊 Dashboard features: Real-time stats, server management, logs, settings",
@@ -179,7 +185,6 @@ function startDevelopment() {
     "🔐 Dashboard uses basic auth token (check .env DASHBOARD_TOKEN)",
     "debug",
   );
-  log("🔄 Auto-restart enabled", "debug");
   log("⌨️  Press Ctrl+C to stop", "debug");
   console.log("");
 
@@ -193,84 +198,72 @@ function startDevelopment() {
     "\x1b[32m║                              🌐 Dashboard: http://localhost:3000 🌐                              ║",
   );
   console.log(
-    "\x1b[32m║                                  ⚡ Hot Reload Enabled ⚡                                        ║",
+    "\x1b[32m║                                  🔄 Auto Reload Enabled 🔄                                        ║",
   );
   console.log(
     "\x1b[32m╚══════════════════════════════════════════════════════════════════════════════════════════════════════╝\x1b[0m",
   );
 
-  // Start the bot process with bun's watch mode
-  const botProcess = exec("bun --watch src/index.ts", {
-    stdio: ["pipe", "pipe", "pipe"],
-    shell: true,
+  // Start nodemon to watch for changes in src/ and restart the esbuild/node process
+  const nodemonCommand = [
+    "pnpm",
+    "exec",
+    "nodemon",
+    "--watch",
+    "./src/**/*.ts",
+    "--ext",
+    "ts,json",
+    "--exec",
+    "sh -c 'pnpm exec esbuild src/index.ts --bundle --platform=node --format=cjs --outfile=./dist/index.js --sourcemap --tsconfig=./tsconfig.json && node ./dist/index.js'",
+    "--delay",
+    "1", // 1-second delay to debounce multiple file changes
+    "--signal",
+    "SIGTERM", // Gracefully shutdown previous process
+    "--verbose",
+    "--legacy-watch", // Fallback for some environments
+  ];
+
+  const nodemonProcess = spawn(nodemonCommand[0], nodemonCommand.slice(1), {
+    stdio: "inherit", // Inherit stdin/stdout/stderr for direct output
     env: { ...process.env, NODE_ENV: "development" },
+    shell: true, // Use shell to correctly execute the compound --exec command
   });
 
-  botProcess.stdout.on("data", (data) => {
-    const output = data.toString();
-    if (output.includes("[SUCCESS]")) {
-      console.log("\x1b[32m" + output.trim() + "\x1b[0m");
-    } else if (output.includes("[ERROR]")) {
-      console.log("\x1b[31m" + output.trim() + "\x1b[0m");
-    } else if (output.includes("[WARN]")) {
-      console.log("\x1b[33m" + output.trim() + "\x1b[0m");
-    } else if (output.includes("[INFO]")) {
-      console.log("\x1b[36m" + output.trim() + "\x1b[0m");
-    } else if (
-      output.includes("Dashboard dostępny") ||
-      output.includes("dashboard")
-    ) {
-      console.log("\x1b[35m🌐 " + output.trim() + "\x1b[0m");
-    } else if (
-      output.includes("Serwer webowy") ||
-      output.includes("web server")
-    ) {
-      console.log("\x1b[35m🌐 " + output.trim() + "\x1b[0m");
-    } else if (
-      output.includes("restarting") ||
-      output.includes("File change detected")
-    ) {
-      console.log("\x1b[35m🔄 " + output.trim() + "\x1b[0m");
-    } else {
-      console.log("\x1b[37m" + output.trim() + "\x1b[0m");
-    }
-  });
-
-  botProcess.stderr.on("data", (data) => {
-    const error = data.toString();
-    // Filter out bun's development warnings that aren't critical
-    if (!error.includes("warn:") && !error.includes("ExperimentalWarning")) {
-      console.log("\x1b[31mERROR: " + error.trim() + "\x1b[0m");
-    }
-  });
-
-  botProcess.on("close", (code) => {
+  nodemonProcess.on("close", (code) => {
     if (code === 0) {
-      log("🤖 Bot process exited normally", "info");
+      log("🤖 Nodemon process exited normally", "info");
     } else {
-      log(`🤖 Bot process exited with code ${code}`, "warn");
+      log(`🤖 Nodemon process exited with code ${code}`, "warn");
     }
+    process.exit(code || 0);
   });
 
-  botProcess.on("error", (error) => {
-    log(`❌ Failed to start bot process: ${error.message}`, "error");
+  nodemonProcess.on("error", (error) => {
+    log(`❌ Failed to start nodemon process: ${error.message}`, "error");
+    process.exit(1);
   });
 
   // Handle Ctrl+C gracefully
   process.on("SIGINT", () => {
-    log("🛑 Shutting down bot...", "warn");
-    botProcess.kill("SIGTERM");
-
+    log("🛑 Shutting down development mode...", "warn");
+    // nodemon will handle SIGTERM itself, but sending it explicitly here ensures it
+    // if the signal doesn't propagate correctly
+    nodemonProcess.kill("SIGINT"); // Send SIGINT to nodemon
     setTimeout(() => {
-      log("💀 Force killing bot process...", "error");
-      botProcess.kill("SIGKILL");
+      if (!nodemonProcess.killed) {
+        log("💀 Force killing nodemon process...", "error");
+        nodemonProcess.kill("SIGKILL");
+      }
       process.exit(0);
-    }, 5000);
+    }, 5000); // Give nodemon 5 seconds to shut down
   });
 
   process.on("SIGTERM", () => {
-    log("🛑 Received SIGTERM, shutting down...", "warn");
-    botProcess.kill("SIGTERM");
+    log("🛑 Received SIGTERM, shutting down development mode...", "warn");
+    nodemonProcess.kill("SIGTERM");
     process.exit(0);
   });
 }
+
+// Start the development process
+startDevelopment();

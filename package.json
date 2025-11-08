@@ -5,14 +5,14 @@
   "main": "dist/index.js",
   "type": "commonjs",
   "scripts": {
-    "build": "bun run scripts/build.js",
-    "start": "bun run dist/index.js",
-    "dev": "bun run scripts/dev.js",
-    "watch": "bun --watch src/index.ts",
+    "build": "node scripts/build.js",
+    "start": "node dist/index.js",
+    "dev": "node scripts/dev.js",
+    "watch": "pnpm exec tsc --watch --preserveWatchOutput",
     "clean": "rm -rf dist node_modules",
-    "lint": "bunx @biomejs/biome check .",
-    "lint:fix": "bunx @biomejs/biome check --apply .",
-    "format": "bunx @biomejs/biome format --write ."
+    "lint": "pnpm exec @biomejs/biome check .",
+    "lint:fix": "pnpm exec @biomejs/biome check --apply .",
+    "format": "pnpm exec @biomejs/biome format --write ."
   },
   "dependencies": {
     "axios": "^1.13.2",
@@ -28,20 +28,15 @@
     "@biomejs/biome": "^2.3.4",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.5",
-    "@types/node": "^24.10.0",
-    "typescript": "^5.9.3"
+    "@types/node": "^20.14.12",
+    "typescript": "^5.9.3",
+    "nodemon": "^3.1.4"
   },
-  "engines": {
-    "bun": ">=1.0.0"
-  },
-  "trustedDependencies": [
-    "@biomejs/biome"
-  ],
   "keywords": [
     "discord",
     "bot",
     "typescript",
-    "bun"
+    "pnpm"
   ],
   "author": "Kaoruko Bot Team",
   "license": "MIT"

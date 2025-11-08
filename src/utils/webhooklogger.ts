@@ -179,7 +179,8 @@ export class WebhookLogger {
       await this.webhookClient.send({
         embeds: [embed],
         username: "Bot Warning Logger",
-        avatarURL: "https://cdn.discordapp.com/embed/avatars/2.png",
+        avatarURL:
+          "https://cdn.discordapp.com/avatars/1398003581512056854/a_940a43c9f073d76847788a8982f08c25.gif?size=1024&animated=true",
       });
     } catch (webhookError) {
       // Use original logger to avoid recursion

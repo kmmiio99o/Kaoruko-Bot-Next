@@ -47,8 +47,8 @@ export class WebhookLogger {
           try {
             LoggerEvents.on("warn", (message: string) => {
               try {
-                // Keep local logging behavior via preserved original logger
-                WebhookLogger.originalLoggerWarn(String(message));
+                // Keep local logging behavior via console.warn to avoid recursion
+                console.warn(String(message));
               } catch {}
 
               // Fire-and-forget to webhook
@@ -78,8 +78,8 @@ export class WebhookLogger {
           try {
             LoggerEvents.on("error", (message: string) => {
               try {
-                // Keep local logging behavior via preserved original logger
-                WebhookLogger.originalLoggerError(String(message));
+                // Keep local logging behavior via console.error to avoid recursion
+                console.error(String(message));
               } catch {}
 
               // Fire-and-forget: send a minimal error report to webhook
@@ -183,11 +183,9 @@ export class WebhookLogger {
           "https://cdn.discordapp.com/avatars/1398003581512056854/a_940a43c9f073d76847788a8982f08c25.gif?size=1024&animated=true",
       });
     } catch (webhookError) {
-      // Use original logger to avoid recursion
+      // Use console.error to avoid recursion in webhook logging failures
       try {
-        WebhookLogger.originalLoggerError(
-          `Failed to send warning webhook log: ${webhookError}`,
-        );
+        console.error(`Failed to send warning webhook log: ${webhookError}`);
       } catch {}
     }
   }
@@ -237,14 +235,13 @@ export class WebhookLogger {
       await this.webhookClient.send({
         embeds: [embed],
         username: "Bot Error Logger",
-        avatarURL: "https://cdn.discordapp.com/embed/avatars/4.png",
+        avatarURL:
+          "https://cdn.discordapp.com/avatars/1398003581512056854/a_940a43c9f073d76847788a8982f08c25.gif?size=1024&animated=true",
       });
     } catch (webhookError) {
-      // Use original logger to avoid recursion
+      // Use console.error to avoid recursion in webhook logging failures
       try {
-        WebhookLogger.originalLoggerError(
-          `Failed to send error webhook log: ${webhookError}`,
-        );
+        console.error(`Failed to send error webhook log: ${webhookError}`);
       } catch {}
     }
   }

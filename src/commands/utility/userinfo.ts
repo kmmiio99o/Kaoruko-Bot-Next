@@ -1,4 +1,9 @@
-import { ChatInputCommandInteraction, Message } from "discord.js";
+import {
+  SlashCommandBuilder,
+  ChatInputCommandInteraction,
+  Message,
+  EmbedBuilder,
+} from "discord.js";
 import { Command } from "../../types";
 import { Embeds } from "../../utils/embeds";
 import { Helpers } from "../../utils/helpers";
@@ -11,6 +16,15 @@ export default {
   prefixCommand: true,
   usage:
     "Slash: /userinfo [user:<user>]\nPrefix: .userinfo [@user | <user_id>]",
+  data: new SlashCommandBuilder()
+    .setName("userinfo")
+    .setDescription("Get information about a user")
+    .addUserOption((option) =>
+      option
+        .setName("user")
+        .setDescription("The user to get information about.")
+        .setRequired(false),
+    ),
   async run(
     interaction: ChatInputCommandInteraction | undefined,
     message: Message | undefined,
@@ -29,6 +43,13 @@ export default {
         user = await client.users.fetch(userId).catch(() => null);
       }
       user = user || message!.author;
+    }
+
+    if (!user) {
+      await (isSlashCommand
+        ? interaction!.reply({ content: "User not found.", ephemeral: true })
+        : message!.reply("User not found."));
+      return;
     }
 
     const member =

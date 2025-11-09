@@ -94,18 +94,6 @@ export const command: ICommand = {
         );
       }
 
-      if (!config.enabled) {
-        await interaction.editReply({
-          embeds: [
-            Embeds.error(
-              "Ticket System Disabled",
-              "The ticket system is currently disabled for this server. Use `/ticketconfig enable:true` to enable it first.",
-            ),
-          ],
-        });
-        return;
-      }
-
       // Create the ticket panel
       const ticketService = TicketService.getInstance();
       Logger.debug(

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// Kaoruko Bot Build Script - Refactored for pnpm and tsc (multi-file compilation)
+// Kaoruko Bot Build Script - Refactored for npm and tsc (multi-file compilation)
 console.log("\x1b[36m╔══════════════════════════════════════╗");
 console.log("\x1b[36m║         BUILDING DISCORD BOT         ║");
 console.log("\x1b[36m╚══════════════════════════════════════╝\x1b[0m");
@@ -46,7 +46,7 @@ function runCommand(command, errorMessage, options = {}) {
     });
 
     child.stderr.on("data", (data) => {
-      process.stderr.write(`\x1b[31m${data}\x1b[0m`);
+      process.stdout.write(`\x1b[31m${data}\x1b[0m`);
     });
 
     child.on("close", (code) => {
@@ -137,13 +137,10 @@ async function startBuild() {
     process.exit(1);
   }
 
-  // Perform compilation with tsc
+  // Compile TypeScript using tsc
   log("🚀 Starting TypeScript compilation with tsc...", "info");
   try {
-    await runCommand(
-      "pnpm exec tsc", // Simply run tsc to compile all files
-      "TypeScript compilation failed!",
-    );
+    await runCommand("npm exec tsc", "TypeScript compilation failed!");
     log("✅ TypeScript compilation completed successfully!", "success");
 
     // Count compiled files for reporting
@@ -174,7 +171,7 @@ async function startBuild() {
     console.log("\n\x1b[32m╔══════════════════════════════════════╗");
     console.log("\x1b[32m║     BUILD COMPLETED SUCCESSFULLY     ║");
     console.log("\x1b[32m╚══════════════════════════════════════╝\x1b[0m");
-    log("You can now run 'pnpm start' to start the bot", "info");
+    log("You can now run 'npm start' to start the bot", "info");
   } catch (error) {
     log(`❌ Build failed: ${error.message}`, "error");
     console.log("\n\x1b[31m╔══════════════════════════════════════╗");

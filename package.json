@@ -8,11 +8,11 @@
     "build": "node scripts/build.js",
     "start": "node dist/index.js",
     "dev": "node scripts/dev.js",
-    "watch": "pnpm exec tsc --watch --preserveWatchOutput",
+    "watch": "npm exec tsc --watch --preserveWatchOutput",
     "clean": "rm -rf dist node_modules",
-    "lint": "pnpm exec @biomejs/biome check .",
-    "lint:fix": "pnpm exec @biomejs/biome check --apply .",
-    "format": "pnpm exec @biomejs/biome format --write ."
+    "lint": "npm exec @biomejs/biome check .",
+    "lint:fix": "npm exec @biomejs/biome check --apply .",
+    "format": "npm exec @biomejs/biome format --write ."
   },
   "dependencies": {
     "axios": "^1.13.2",
@@ -36,7 +36,7 @@
     "discord",
     "bot",
     "typescript",
-    "pnpm"
+    "npm"
   ],
   "author": "Kaoruko Bot Team",
   "license": "MIT"

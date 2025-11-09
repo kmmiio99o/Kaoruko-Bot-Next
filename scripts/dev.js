@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// Kaoruko Bot Development Script - Refactored for pnpm, tsc, and esbuild with nodemon
+// Kaoruko Bot Development Script - Refactored for npm and tsc (multi-file compilation) with nodemon
 console.log(
   "\x1b[36m╔══════════════════════════════════════════════════════════════════════════════════════════════════╗",
 );
@@ -14,10 +14,10 @@ console.log(
   "\x1b[36m║                      Advanced Discord Bot Framework - TypeScript Edition                         ║",
 );
 console.log(
-  "\x1b[36m║                              🌐 Built-in Web Dashboard Included 🌐                              ║",
+  "\x1b[36m║                                🌐 Built-in Web Dashboard Included 🌐                              ║",
 );
 console.log(
-  "\x1b[36m║                                  ⚡ Powered by pnpm & esbuild ⚡                                 ║",
+  "\x1b[36m║                                   ⚡ Powered by Node.js & npm ⚡                                 ║",
 );
 console.log(
   "\x1b[36m╚══════════════════════════════════════════════════════════════════════════════════════════════════╝\x1b[0m",
@@ -65,7 +65,7 @@ function runCommand(command, errorMessage, options = {}) {
     });
 
     child.stderr.on("data", (data) => {
-      process.stderr.write(`\x1b[31m${data}\x1b[0m`);
+      process.stdout.write(`\x1b[31m${data}\x1b[0m`);
     });
 
     child.on("close", (code) => {
@@ -111,8 +111,8 @@ async function startDevelopment() {
     const defaultTsConfig = {
       compilerOptions: {
         target: "ES2022",
-        module: "ESNext",
-        moduleResolution: "bundler",
+        module: "CommonJS",
+        moduleResolution: "node",
         lib: ["ES2022"],
         outDir: "./dist",
         rootDir: "./src",
@@ -146,7 +146,7 @@ async function startDevelopment() {
     }
   }
 
-  // Validate entry point
+  // Check source directory
   log("📂 Checking source entry point...", "info");
   const entryPoint = "./src/index.ts";
   if (!fs.existsSync(entryPoint)) {
@@ -154,25 +154,10 @@ async function startDevelopment() {
       `❌ Source entry point (${entryPoint}) not found! Cannot start development.`,
       "error",
     );
+    log("💡 Please create the src/index.ts file.", "info");
     process.exit(1);
   }
   log(`✅ Found entry point: ${entryPoint}`, "success");
-
-  // Initial type check
-  log("Starting initial TypeScript type checking with tsc --noEmit...", "info");
-  try {
-    await runCommand(
-      "pnpm exec tsc --noEmit",
-      "Initial TypeScript type checking failed!",
-    );
-    log("Initial TypeScript type checking completed successfully.", "success");
-  } catch (error) {
-    log(`❌ ${error.message}`, "error");
-    console.log("\n\x1b[31m╔══════════════════════════════════════╗");
-    console.log("\x1b[31m║        DEV FAILED (Type Errors)      ║");
-    console.log("\x1b[31m╚══════════════════════════════════════╝\x1b[0m");
-    process.exit(1);
-  }
 
   log("🚀 Starting bot in development mode with nodemon...", "info");
   log("🔄 Auto-restart on file changes enabled.", "success");
@@ -204,17 +189,16 @@ async function startDevelopment() {
     "\x1b[32m╚══════════════════════════════════════════════════════════════════════════════════════════════════════╝\x1b[0m",
   );
 
-  // Start nodemon to watch for changes in src/ and restart the esbuild/node process
   const nodemonCommand = [
-    "pnpm",
+    "npm",
     "exec",
     "nodemon",
     "--watch",
-    "./src/**/*.ts",
+    "src",
     "--ext",
     "ts,json",
     "--exec",
-    "sh -c 'pnpm exec esbuild src/index.ts --bundle --platform=node --format=cjs --outfile=./dist/index.js --sourcemap --tsconfig=./tsconfig.json && node ./dist/index.js'",
+    "sh -c 'npm exec tsc && node ./dist/index.js'",
     "--delay",
     "1", // 1-second delay to debounce multiple file changes
     "--signal",
@@ -231,9 +215,9 @@ async function startDevelopment() {
 
   nodemonProcess.on("close", (code) => {
     if (code === 0) {
-      log("🤖 Nodemon process exited normally", "info");
+      log("🤖 Development server exited normally", "info");
     } else {
-      log(`🤖 Nodemon process exited with code ${code}`, "warn");
+      log(`🤖 Development server exited with code ${code}`, "warn");
     }
     process.exit(code || 0);
   });
@@ -246,8 +230,6 @@ async function startDevelopment() {
   // Handle Ctrl+C gracefully
   process.on("SIGINT", () => {
     log("🛑 Shutting down development mode...", "warn");
-    // nodemon will handle SIGTERM itself, but sending it explicitly here ensures it
-    // if the signal doesn't propagate correctly
     nodemonProcess.kill("SIGINT"); // Send SIGINT to nodemon
     setTimeout(() => {
       if (!nodemonProcess.killed) {

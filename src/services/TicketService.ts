@@ -43,10 +43,6 @@ export class TicketService {
     try {
       // Get ticket configuration
       const config = await TicketConfig.findByGuild(guild.id);
-      if (!config || !config.enabled) {
-        Logger.warn(`Ticket system not enabled for guild ${guild.id}`);
-        return null;
-      }
 
       // Check if user can create tickets
       const userTickets = await Ticket.find({
@@ -850,15 +846,30 @@ export class TicketService {
    */
   private async logTicketEvent(
     guild: Guild,
-    logChannelId: string,
+    logChannelId: string | undefined,
     event: string,
     ticket: ITicket,
     user: User,
     reason?: string,
   ): Promise<void> {
     try {
-      const logChannel = guild.channels.cache.get(logChannelId) as TextChannel;
-      if (!logChannel) return;
+      let logChannel: TextChannel | undefined;
+      if (logChannelId) {
+        logChannel = guild.channels.cache.get(logChannelId) as TextChannel;
+      }
+      // Fallback to channel named "ticket-logs" if logChannelId is not set or channel not found
+      if (!logChannel) {
+        logChannel = guild.channels.cache.find(
+          (ch) =>
+            ch.type === ChannelType.GuildText && ch.name === "ticket-logs",
+        ) as TextChannel;
+      }
+      if (!logChannel) {
+        Logger.warn(
+          `No log channel found for ticket logs (logChannelId: ${logChannelId}). Tried fallback to 'ticket-logs'.`,
+        );
+        return;
+      }
 
       const embed = new EmbedBuilder()
         .setTitle(`📋 Ticket ${event.charAt(0).toUpperCase() + event.slice(1)}`)

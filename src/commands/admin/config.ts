@@ -241,6 +241,15 @@ export const command: ICommand = {
             )
             .addChannelOption((option) =>
               option
+                .setName("panel")
+                .setDescription(
+                  "Ticket panel channel (used for category fallback)",
+                )
+                .addChannelTypes(ChannelType.GuildText)
+                .setRequired(false),
+            )
+            .addChannelOption((option) =>
+              option
                 .setName("logs")
                 .setDescription("Ticket logs channel")
                 .addChannelTypes(ChannelType.GuildText)
@@ -1254,6 +1263,7 @@ async function handleTicketsConfig(
     case "quick-setup":
       const category = interaction.options.getChannel("category");
       const logsChannel = interaction.options.getChannel("logs");
+      const panelChannel = interaction.options.getChannel("panel");
       const supportRole = interaction.options.getRole("support-role");
 
       if (!category || category.type !== ChannelType.GuildCategory) {
@@ -1281,6 +1291,9 @@ async function handleTicketsConfig(
       if (logsChannel) {
         ticketConfig.logChannelId = logsChannel.id;
       }
+      if (panelChannel) {
+        ticketConfig.panelChannelId = panelChannel.id;
+      }
 
       if (supportRole) {
         ticketConfig.supportRoles = [supportRole.id];
@@ -1297,6 +1310,11 @@ async function handleTicketsConfig(
           {
             name: "Logs Channel",
             value: logsChannel ? `${logsChannel}` : "❌ Not set",
+            inline: true,
+          },
+          {
+            name: "Panel Channel",
+            value: panelChannel ? `${panelChannel}` : "❌ Not set",
             inline: true,
           },
         )

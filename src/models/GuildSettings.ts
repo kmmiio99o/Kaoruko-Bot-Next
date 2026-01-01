@@ -32,26 +32,32 @@ export interface IGuildSettings extends Document {
   updatedAt: Date;
 }
 
-const AutoModerationSchema = new Schema({
-  enabled: { type: Boolean, default: false },
-  deleteInvites: { type: Boolean, default: false },
-  deleteSpam: { type: Boolean, default: false },
-  maxWarnings: { type: Number, default: 3 },
-  spamThreshold: { type: Number, default: 5 },
-  profanityFilter: { type: Boolean, default: false }
-}, { _id: false });
+const AutoModerationSchema = new Schema(
+  {
+    enabled: { type: Boolean, default: false },
+    deleteInvites: { type: Boolean, default: false },
+    deleteSpam: { type: Boolean, default: false },
+    maxWarnings: { type: Number, default: 3 },
+    spamThreshold: { type: Number, default: 5 },
+    profanityFilter: { type: Boolean, default: false },
+  },
+  { _id: false },
+);
 
-const PermissionsSchema = new Schema({
-  adminRoles: { type: [String], default: [] },
-  modRoles: { type: [String], default: [] },
-  blacklistedUsers: { type: [String], default: [] },
-  allowedChannels: { type: [String], default: [] },
-  blockedChannels: { type: [String], default: [] }
-}, { _id: false });
+const PermissionsSchema = new Schema(
+  {
+    adminRoles: { type: [String], default: [] },
+    modRoles: { type: [String], default: [] },
+    blacklistedUsers: { type: [String], default: [] },
+    allowedChannels: { type: [String], default: [] },
+    blockedChannels: { type: [String], default: [] },
+  },
+  { _id: false },
+);
 
 const GuildSettingsSchema = new Schema({
   guildId: { type: String, required: true, unique: true },
-  prefix: { type: String, default: '.' },
+  prefix: { type: String, default: "." },
   logCommands: { type: Boolean, default: true },
   logErrors: { type: Boolean, default: true },
   logEvents: { type: Boolean, default: true },
@@ -64,7 +70,7 @@ const GuildSettingsSchema = new Schema({
   updatedAt: { type: Date, default: Date.now },
 });
 
-GuildSettingsSchema.pre("save", function (next) {
+GuildSettingsSchema.pre("save", function (next: (err?: any) => void) {
   this.updatedAt = new Date(Date.now());
   next();
 });

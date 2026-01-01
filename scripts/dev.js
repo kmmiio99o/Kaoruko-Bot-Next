@@ -189,28 +189,16 @@ async function startDevelopment() {
     "\x1b[32m╚══════════════════════════════════════════════════════════════════════════════════════════════════════╝\x1b[0m",
   );
 
-  const nodemonCommand = [
-    "npm",
-    "exec",
-    "nodemon",
-    "--watch",
-    "src",
-    "--ext",
-    "ts,json",
-    "--exec",
-    "sh -c 'npm exec tsc && node ./dist/index.js'",
-    "--delay",
-    "1", // 1-second delay to debounce multiple file changes
-    "--signal",
-    "SIGTERM", // Gracefully shutdown previous process
-    "--verbose",
-    "--legacy-watch", // Fallback for some environments
-  ];
+  // Use a single shell command with npx to avoid issues with `npm exec` in some environments.
+  // This runs nodemon via npx and ensures the same behavior but without relying on `npm exec`.
+  const nodemonShellCommand =
+    "npx nodemon --watch src --ext ts,json --exec \"sh -c 'npx tsc && node ./dist/index.js'\" --delay 1 --signal SIGTERM --verbose --legacy-watch";
 
-  const nodemonProcess = spawn(nodemonCommand[0], nodemonCommand.slice(1), {
+  // Spawn a shell to run the single command string. Avoids the earlier `npm exec`/arg-array path problems.
+  const nodemonProcess = spawn("sh", ["-c", nodemonShellCommand], {
     stdio: "inherit", // Inherit stdin/stdout/stderr for direct output
     env: { ...process.env, NODE_ENV: "development" },
-    shell: true, // Use shell to correctly execute the compound --exec command
+    shell: false,
   });
 
   nodemonProcess.on("close", (code) => {

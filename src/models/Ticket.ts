@@ -145,7 +145,7 @@ TicketSchema.index({ ticketId: 1 }, { unique: true });
 TicketSchema.index({ channelId: 1 }, { unique: true });
 
 // Pre-save middleware
-TicketSchema.pre("save", function (next) {
+TicketSchema.pre("save", function (next: (err?: any) => void) {
   this.updatedAt = new Date();
   if (this.isModified() && !this.isNew) {
     this.lastActivity = new Date();

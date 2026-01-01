@@ -232,7 +232,7 @@ const TicketConfigSchema = new Schema({
 TicketConfigSchema.index({ guildId: 1 }, { unique: true });
 
 // Pre-save middleware
-TicketConfigSchema.pre("save", function (next) {
+TicketConfigSchema.pre("save", function (next: (err?: any) => void) {
   this.updatedAt = new Date();
   next();
 });

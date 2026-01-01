@@ -2,11 +2,8 @@ import {
   SlashCommandBuilder,
   CommandInteraction,
   EmbedBuilder,
-  User,
-  MessageFlags,
 } from "discord.js";
-import { ICommand } from "../../types/Command";
-import { Logger } from "../../utils/logger";
+import { ICommand } from "@/types/Command";
 
 // Array of GIFs
 const slapGifs = [
@@ -22,7 +19,7 @@ const slapGifs = [
 export const command: ICommand = {
   name: "slap",
   description: "Slaps another user",
-  category: "fun", // Assuming 'fun' category
+  category: "fun",
   slashCommand: true,
   prefixCommand: true,
   data: new SlashCommandBuilder()

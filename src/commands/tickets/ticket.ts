@@ -3,10 +3,7 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from "discord.js";
-import { ICommand } from "../../types/Command";
-import { default as Ticket, TicketStatus } from "../../models/Ticket";
-import { Logger } from "../../utils/logger";
-import { Embeds } from "../../utils/embeds";
+import { ICommand } from "@/types/Command";
 
 export const command: ICommand = {
   name: "ticket",

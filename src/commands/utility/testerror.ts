@@ -1,7 +1,7 @@
 import { ChatInputCommandInteraction, Message } from "discord.js";
-import { Command } from "../../types";
-import { Embeds } from "../../utils/embeds";
-import { Logger } from "../../utils/logger";
+import { ICommand } from "@/types/Command";
+import { Embeds } from "@utils/embeds";
+import { Logger } from "@utils/logger";
 
 export default {
   name: "testerror",
@@ -84,4 +84,4 @@ export default {
         }
     }
   },
-} as Command;
+} as ICommand;

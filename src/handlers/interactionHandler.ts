@@ -1,7 +1,7 @@
 import { Client, ChatInputCommandInteraction } from "discord.js";
 import { CommandHandler } from "./commandHandler";
-import { Embeds } from "../utils/embeds";
-import { Logger } from "../utils/logger";
+import { Embeds } from "@utils/embeds";
+import { Logger } from "@utils/logger";
 
 export class InteractionHandler {
   constructor(private commandHandler: CommandHandler) {}

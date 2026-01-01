@@ -5,8 +5,7 @@ import {
   ColorResolvable,
   MessageFlags,
 } from "discord.js";
-import { ICommand } from "../../types/Command";
-import { Logger } from "../../utils/logger";
+import { ICommand } from "@/types/Command";
 
 /**
  * Interface for the result of the ship compatibility calculation.

@@ -7,15 +7,14 @@ import {
   TextChannel,
   TextInputBuilder,
   TextInputStyle,
-  AttachmentBuilder,
   MessageFlags,
 } from "discord.js";
-import { WebhookLogger } from "../utils/webhooklogger";
-import Ticket, { TicketStatus, TicketCategory } from "../models/Ticket";
-import TicketConfig from "../models/TicketConfig";
-import { Logger } from "../utils/logger";
-import { Embeds } from "../utils/embeds";
-import { TicketService } from "../services/TicketService";
+import { WebhookLogger } from "@utils/webhooklogger";
+import Ticket, { TicketStatus, TicketCategory } from "@models/Ticket";
+import TicketConfig from "@models/TicketConfig";
+import { Logger } from "@utils/logger";
+import { Embeds } from "@utils/embeds";
+import { TicketService } from "@services/TicketService";
 
 export class TicketInteractionHandler {
   private ticketService: TicketService;

@@ -4,23 +4,16 @@ import {
   EmbedBuilder,
   PermissionFlagsBits,
   ChannelType,
-  Role,
   ActionRowBuilder,
-  StringSelectMenuBuilder,
   ButtonBuilder,
   ButtonStyle,
   ComponentType,
-  TextChannel,
 } from "discord.js";
-import { ICommand } from "../../types/Command";
-import { Embeds } from "../../utils/embeds";
-import { Logger } from "../../utils/logger";
-import GuildSettings, {
-  IGuildSettings,
-  IAutoModeration,
-  IPermissions,
-} from "../../models/GuildSettings";
-import TicketConfig from "../../models/TicketConfig";
+import { ICommand } from "@/types/Command";
+import { Embeds } from "@utils/embeds";
+import { Logger } from "@utils/logger";
+import GuildSettings, { IGuildSettings } from "@models/GuildSettings";
+import TicketConfig from "@models/TicketConfig";
 
 export const command: ICommand = {
   name: "config",

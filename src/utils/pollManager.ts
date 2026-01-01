@@ -7,7 +7,6 @@ import {
   ButtonStyle,
   ActionRowBuilder,
 } from "discord.js";
-import { Embeds } from "./embeds";
 import { Logger } from "./logger";
 
 interface PollData {

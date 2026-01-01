@@ -2,11 +2,9 @@ import {
   SlashCommandBuilder,
   CommandInteraction,
   EmbedBuilder,
-  User,
   MessageFlags,
 } from "discord.js";
-import { ICommand } from "../../types/Command";
-import { Logger } from "../../utils/logger"; // Included for structural consistency
+import { ICommand } from "@/types/Command";
 
 // Array of GIFs, as provided.
 const hugGifs = [

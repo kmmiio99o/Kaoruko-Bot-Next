@@ -1,7 +1,7 @@
 import { ChatInputCommandInteraction, Message } from "discord.js";
-import { Command } from "../../types";
-import { Embeds } from "../../utils/embeds";
-import { Helpers } from "../../utils/helpers";
+import { ICommand } from "@/types/Command";
+import { Embeds } from "@utils/embeds";
+import { Helpers } from "@utils/helpers";
 
 export default {
   name: "serverinfo",
@@ -66,4 +66,4 @@ export default {
       await message!.reply({ embeds: [embed] });
     }
   },
-} as Command;
+} as ICommand;

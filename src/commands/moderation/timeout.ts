@@ -4,9 +4,9 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from "discord.js";
-import { Command } from "../../types";
-import { Embeds } from "../../utils/embeds";
-import { Logger } from "../../utils/logger";
+import { ICommand } from "@/types/Command";
+import { Embeds } from "@utils/embeds";
+import { Logger } from "@utils/logger";
 
 export default {
   name: "timeout",
@@ -306,7 +306,7 @@ export default {
       else if (message) await message.reply(payload);
     }
   },
-} as Command;
+} as ICommand;
 
 // Helper function to parse time strings
 function parseTime(time: string): number {

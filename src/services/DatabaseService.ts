@@ -1,5 +1,5 @@
-import GuildSettings, { IGuildSettings } from "../models/GuildSettings";
-import { Logger } from "../utils/logger";
+import GuildSettings, { IGuildSettings } from "@models/GuildSettings";
+import { Logger } from "@utils/logger";
 
 export class DatabaseService {
   // Get guild settings with default values

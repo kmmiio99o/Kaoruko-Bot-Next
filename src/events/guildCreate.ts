@@ -1,9 +1,11 @@
-import { Guild } from 'discord.js';
-import { Logger } from '../utils/logger';
+import { Guild } from "discord.js";
+import { Logger } from "@utils/logger";
 
 export default {
-  name: 'guildCreate',
+  name: "guildCreate",
   async execute(guild: Guild) {
-    Logger.info(`Joined new guild: ${guild.name} (${guild.id}) with ${guild.memberCount} members`);
-  }
+    Logger.info(
+      `Joined new guild: ${guild.name} (${guild.id}) with ${guild.memberCount} members`,
+    );
+  },
 };

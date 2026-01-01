@@ -1,11 +1,6 @@
-import {
-  Collection,
-  REST,
-  Routes,
-  ApplicationCommandOptionType,
-} from "discord.js";
-import { ICommand } from "../types/Command";
-import { Logger } from "../utils/logger";
+import { Collection, REST, Routes } from "discord.js";
+import { ICommand } from "@/types/Command";
+import { Logger } from "@utils/logger";
 import fs from "fs";
 import path from "path";
 

@@ -5,9 +5,9 @@ import {
   EmbedBuilder,
   PermissionFlagsBits,
 } from "discord.js";
-import { ICommand } from "../../types/Command";
-import { Embeds } from "../../utils/embeds";
-import { PollManager } from "../../utils/pollManager";
+import { ICommand } from "@/types/Command";
+import { Embeds } from "@utils/embeds";
+import { PollManager } from "@utils/pollManager";
 
 export const command: ICommand = {
   name: "endpoll",

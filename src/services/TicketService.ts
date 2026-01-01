@@ -15,10 +15,10 @@ import {
   GuildMember,
   Collection,
 } from "discord.js";
-import Ticket, { ITicket, TicketStatus } from "../models/Ticket";
-import TicketConfig, { ITicketConfig } from "../models/TicketConfig";
-import { Logger } from "../utils/logger";
-import { Embeds } from "../utils/embeds";
+import Ticket, { ITicket, TicketStatus } from "@models/Ticket";
+import TicketConfig, { ITicketConfig } from "@models/TicketConfig";
+import { Logger } from "@utils/logger";
+import { Embeds } from "@utils/embeds";
 
 export class TicketService {
   private static instance: TicketService;

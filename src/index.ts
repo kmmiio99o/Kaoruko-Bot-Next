@@ -1,22 +1,18 @@
 import {
   Client,
   GatewayIntentBits,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
   ActivityType,
   PresenceData,
 } from "discord.js";
 import { config } from "./config/config";
-import { CommandHandler } from "./handlers/commandHandler";
-import { EventHandler } from "./handlers/eventHandler";
-import { Logger } from "./utils/logger";
-import { Embeds } from "./utils/embeds";
-import { WebhookLogger } from "./utils/webhooklogger";
+import { CommandHandler } from "@handlers/commandHandler";
+import { EventHandler } from "@handlers/eventHandler";
+import { Logger } from "@utils/logger";
+import { Embeds } from "@utils/embeds";
+import { WebhookLogger } from "@utils/webhooklogger";
 import { Database } from "./config/database";
-import { DatabaseService } from "./services/DatabaseService";
-import { WebServer } from "./services/WebServer";
-import { TicketInteractionHandler } from "./handlers/ticketInteractionHandler";
+import { WebServer } from "@services/WebServer";
+import { TicketInteractionHandler } from "@handlers/ticketInteractionHandler";
 
 const client = new Client({
   intents: [

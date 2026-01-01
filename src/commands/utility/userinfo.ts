@@ -2,11 +2,9 @@ import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
   Message,
-  EmbedBuilder,
 } from "discord.js";
-import { Command } from "../../types";
-import { Embeds } from "../../utils/embeds";
-import { Helpers } from "../../utils/helpers";
+import { ICommand } from "@/types/Command";
+import { Embeds } from "@utils/embeds";
 
 export default {
   name: "userinfo",
@@ -91,4 +89,4 @@ export default {
       await message!.reply({ embeds: [embed] });
     }
   },
-} as Command;
+} as ICommand;

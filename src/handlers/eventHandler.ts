@@ -1,6 +1,6 @@
 import { Client } from "discord.js";
-import { Event } from "../types";
-import { Logger } from "../utils/logger";
+import { Event } from "@/types";
+import { Logger } from "@utils/logger";
 import fs from "fs";
 import path from "path";
 

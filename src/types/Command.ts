@@ -6,7 +6,7 @@ import {
   Message,
   PermissionResolvable,
 } from "discord.js";
-import { CommandHandler } from "../handlers/commandHandler";
+import { CommandHandler } from "@handlers/commandHandler";
 
 export interface ICommand {
   name: string;

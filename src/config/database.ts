@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { Logger } from "../utils/logger";
+import { Logger } from "@utils/logger";
 
 export class Database {
   static async connect() {

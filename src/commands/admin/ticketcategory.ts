@@ -4,13 +4,13 @@ import {
   EmbedBuilder,
   PermissionFlagsBits,
 } from "discord.js";
-import { ICommand } from "../../types/Command";
-import { Embeds } from "../../utils/embeds";
-import { Logger } from "../../utils/logger";
+import { ICommand } from "@/types/Command";
+import { Embeds } from "@utils/embeds";
+import { Logger } from "@utils/logger";
 import TicketConfig, {
   ITicketCategoryConfig,
   ITicketConfig as ITicketConfigType,
-} from "../../models/TicketConfig";
+} from "@models/TicketConfig";
 
 export const command: ICommand = {
   name: "ticketcategory",

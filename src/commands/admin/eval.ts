@@ -1,6 +1,6 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
-import { ICommand } from "../../types/Command";
-import { Embeds } from "../../utils/embeds";
+import { ICommand } from "@/types/Command";
+import { Embeds } from "@utils/embeds";
 
 export const command: ICommand = {
   name: "eval",

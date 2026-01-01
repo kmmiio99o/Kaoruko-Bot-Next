@@ -30,11 +30,21 @@
     "exactOptionalPropertyTypes": false,
     "useUnknownInCatchVariables": false,
     "noUnusedLocals": false,
-    "noUnusedParameters": false
+    "noUnusedParameters": false,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@utils/*": ["src/utils/*"],
+      "@types/*": ["src/types/*"],
+      "@handlers/*": ["src/handlers/*"],
+      "@events/*": ["src/events/*"],
+      "@models/*": ["src/models/*"],
+      "@services/*": ["src/services/*"],
+    },
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.spec.ts", "**/*.test.ts"],
   "ts-node": {
-    "esm": false
-  }
+    "esm": false,
+  },
 }

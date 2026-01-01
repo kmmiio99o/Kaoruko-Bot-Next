@@ -1,6 +1,6 @@
 import { ChatInputCommandInteraction, Message } from "discord.js";
-import { Command } from "../../types";
-import { Embeds } from "../../utils/embeds";
+import { ICommand } from "@/types/Command";
+import { Embeds } from "@utils/embeds";
 
 export default {
   name: "ping",
@@ -54,4 +54,4 @@ export default {
       });
     }
   },
-} as Command;
+} as ICommand;

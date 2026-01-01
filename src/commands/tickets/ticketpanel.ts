@@ -6,11 +6,11 @@ import {
   ChannelType,
   TextChannel,
 } from "discord.js";
-import { ICommand } from "../../types/Command";
-import { Embeds } from "../../utils/embeds";
-import { Logger } from "../../utils/logger";
-import TicketConfig from "../../models/TicketConfig";
-import { TicketService } from "../../services/TicketService";
+import { ICommand } from "@/types/Command";
+import { Embeds } from "@utils/embeds";
+import { Logger } from "@utils/logger";
+import TicketConfig from "@models/TicketConfig";
+import { TicketService } from "@services/TicketService";
 
 export const command: ICommand = {
   name: "ticketpanel",

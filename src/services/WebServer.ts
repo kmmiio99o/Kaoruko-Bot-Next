@@ -6,7 +6,7 @@ import path from "path";
 import { Client } from "discord.js";
 import { Logger } from "../utils/logger";
 import { DatabaseService } from "./DatabaseService";
-import { CommandHandler } from "../handlers/commandHandler";
+import { CommandHandler } from "@handlers/commandHandler";
 
 export class WebServer {
   private app: Express;

@@ -27,12 +27,15 @@
     "module-alias": "^2.2.3"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.3.11",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^25.0.5",
     "nodemon": "^3.1.11",
     "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": "25.x",
+    "npm": "11.6.2"
   },
   "keywords": [
     "discord",

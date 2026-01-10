@@ -70,9 +70,10 @@ const GuildSettingsSchema = new Schema({
   updatedAt: { type: Date, default: Date.now },
 });
 
-GuildSettingsSchema.pre("save", function (next: (err?: any) => void) {
-  this.updatedAt = new Date(Date.now());
-  next();
+GuildSettingsSchema.pre("save", function () {
+  try {
+    (this as any).updatedAt = new Date(Date.now());
+  } catch (e) {}
 });
 
 export default mongoose.model<IGuildSettings>(

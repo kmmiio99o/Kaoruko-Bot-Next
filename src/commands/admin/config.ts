@@ -12,8 +12,8 @@ import {
 import { ICommand } from "@/types/Command";
 import { Embeds } from "@utils/embeds";
 import { Logger } from "@utils/logger";
-import GuildSettings, { IGuildSettings } from "@models/GuildSettings";
-import TicketConfig from "@models/TicketConfig";
+import GuildSettings, { IGuildSettings } from "@/types/GuildSettings";
+import TicketConfig from "@/types/TicketConfig";
 
 export const command: ICommand = {
   name: "config",

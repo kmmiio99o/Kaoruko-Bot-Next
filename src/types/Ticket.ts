@@ -145,12 +145,18 @@ TicketSchema.index({ ticketId: 1 }, { unique: true });
 TicketSchema.index({ channelId: 1 }, { unique: true });
 
 // Pre-save middleware
-TicketSchema.pre("save", function (next: (err?: any) => void) {
-  this.updatedAt = new Date();
-  if (this.isModified() && !this.isNew) {
-    this.lastActivity = new Date();
-  }
-  next();
+
+TicketSchema.pre("save", function () {
+  try {
+    (this as any).updatedAt = new Date();
+    if (
+      typeof (this as any).isModified === "function" &&
+      (this as any).isModified() &&
+      !(this as any).isNew
+    ) {
+      (this as any).lastActivity = new Date();
+    }
+  } catch (e) {}
 });
 
 // Define interface for static methods

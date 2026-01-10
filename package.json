@@ -33,10 +33,6 @@
     "nodemon": "^3.1.11",
     "typescript": "^5.9.3"
   },
-  "engines": {
-    "node": "25.x",
-    "npm": "11.6.2"
-  },
   "keywords": [
     "discord",
     "bot",

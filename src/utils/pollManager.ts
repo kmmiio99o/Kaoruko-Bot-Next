@@ -1,12 +1,4 @@
-import {
-  Client,
-  EmbedBuilder,
-  Message,
-  TextChannel,
-  ButtonBuilder,
-  ButtonStyle,
-  ActionRowBuilder,
-} from "discord.js";
+import { Client, EmbedBuilder, TextChannel } from "discord.js";
 import { Logger } from "./logger";
 
 interface PollData {

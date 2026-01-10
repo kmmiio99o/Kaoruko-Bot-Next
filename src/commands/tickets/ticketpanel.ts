@@ -9,7 +9,7 @@ import {
 import { ICommand } from "@/types/Command";
 import { Embeds } from "@utils/embeds";
 import { Logger } from "@utils/logger";
-import TicketConfig from "@models/TicketConfig";
+import TicketConfig from "@/types/TicketConfig";
 import { TicketService } from "@services/TicketService";
 
 export const command: ICommand = {

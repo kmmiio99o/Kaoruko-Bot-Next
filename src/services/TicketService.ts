@@ -1,6 +1,5 @@
 import {
   Guild,
-  GuildChannel,
   TextChannel,
   User,
   EmbedBuilder,
@@ -12,13 +11,10 @@ import {
   PermissionFlagsBits,
   CategoryChannel,
   Message,
-  GuildMember,
-  Collection,
 } from "discord.js";
-import Ticket, { ITicket, TicketStatus } from "@models/Ticket";
-import TicketConfig, { ITicketConfig } from "@models/TicketConfig";
+import Ticket, { ITicket, TicketStatus } from "@/types/Ticket";
+import TicketConfig, { ITicketConfig } from "@/types/TicketConfig";
 import { Logger } from "@utils/logger";
-import { Embeds } from "@utils/embeds";
 
 export class TicketService {
   private static instance: TicketService;

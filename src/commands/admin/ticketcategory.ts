@@ -10,7 +10,7 @@ import { Logger } from "@utils/logger";
 import TicketConfig, {
   ITicketCategoryConfig,
   ITicketConfig as ITicketConfigType,
-} from "@models/TicketConfig";
+} from "@/types/TicketConfig";
 
 export const command: ICommand = {
   name: "ticketcategory",

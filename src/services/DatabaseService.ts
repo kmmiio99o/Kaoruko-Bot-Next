@@ -1,4 +1,4 @@
-import GuildSettings, { IGuildSettings } from "@models/GuildSettings";
+import GuildSettings, { IGuildSettings } from "@/types/GuildSettings";
 import { Logger } from "@utils/logger";
 
 export class DatabaseService {

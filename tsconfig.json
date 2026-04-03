@@ -34,6 +34,7 @@
 		"rootDirs": [".", "src"],
 		"paths": {
 			"@/*": ["./src/*"],
+			"@manifest": ["./src/manifest"],
 			"@utils/*": ["./src/utils/*"],
 			"@types/*": ["./src/types/*"],
 			"@handlers/*": ["./src/handlers/*"],

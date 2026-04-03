@@ -1,7 +1,6 @@
 import { Logger } from "@utils/logger";
 import { Database } from "@/config/database";
-import { type TicketConfigData, defaultTicketConfig } from "@/types/TicketConfig";
-import TicketConfig from "@/types/TicketConfig";
+import TicketConfig, { defaultTicketConfig, type TicketConfigData } from "@/types/TicketConfig";
 
 export class TicketConfigService {
 	private static getStorage() {
@@ -13,8 +12,8 @@ export class TicketConfigService {
 	}
 
 	static async findByGuild(guildId: string): Promise<TicketConfigData | null> {
-		const storage = this.getStorage();
-		const usingFallback = this.isUsingFallback();
+		const storage = TicketConfigService.getStorage();
+		const usingFallback = TicketConfigService.isUsingFallback();
 
 		if (usingFallback && storage) {
 			const config = storage.getTicketConfig(guildId);
@@ -37,8 +36,8 @@ export class TicketConfigService {
 	}
 
 	static async createDefault(guildId: string): Promise<TicketConfigData> {
-		const storage = this.getStorage();
-		const usingFallback = this.isUsingFallback();
+		const storage = TicketConfigService.getStorage();
+		const usingFallback = TicketConfigService.isUsingFallback();
 
 		if (usingFallback && storage) {
 			const defaultConfig = { ...defaultTicketConfig, guildId };

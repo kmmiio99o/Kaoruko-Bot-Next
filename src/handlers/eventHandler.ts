@@ -1,30 +1,19 @@
+import { events } from "@manifest";
 import { Logger } from "@utils/logger";
 import type { Client } from "discord.js";
-import fs from "fs";
-import path from "path";
 import type { Event } from "@/types";
 
 export class EventHandler {
 	async loadEvents(client: Client) {
-		const eventsPath = path.join(__dirname, "../events");
+		let loadedCount = 0;
 
-		if (!fs.existsSync(eventsPath)) {
-			Logger.warn("Events directory not found");
-			return;
-		}
-
-		const eventFiles = fs
-			.readdirSync(eventsPath)
-			.filter((file) => file.endsWith(".js"));
-
-		for (const file of eventFiles) {
+		for (const entry of events) {
 			try {
-				const filePath = path.join(eventsPath, file);
-				const eventModule = await import(filePath);
-				const event: Event = eventModule.default || eventModule;
+				const eventModule = await entry.module;
+				const event: Event = (eventModule as any).default || eventModule;
 
 				if (!event.name) {
-					Logger.warn(`Invalid event in ${file}`);
+					Logger.warn(`Invalid event in ${entry.path}`);
 					continue;
 				}
 
@@ -35,11 +24,12 @@ export class EventHandler {
 				}
 
 				Logger.info(`Loaded event: ${event.name}`);
+				loadedCount++;
 			} catch (error) {
-				Logger.error(`Error loading event ${file}: ${error}`);
+				Logger.error(`Error loading event ${entry.path}: ${error}`);
 			}
 		}
 
-		Logger.success(`Loaded ${eventFiles.length} events`);
+		Logger.success(`Loaded ${loadedCount} events`);
 	}
 }

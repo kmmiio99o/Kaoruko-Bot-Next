@@ -39,8 +39,8 @@ export class DatabaseService {
 	}
 
 	static async getGuildSettings(guildId: string): Promise<IGuildSettings> {
-		const storage = this.getStorage();
-		const usingFallback = this.isUsingFallback();
+		const storage = DatabaseService.getStorage();
+		const usingFallback = DatabaseService.isUsingFallback();
 
 		if (usingFallback && storage) {
 			let settings = storage.getGuildSettings(guildId);
@@ -74,8 +74,8 @@ export class DatabaseService {
 		guildId: string,
 		updates: Partial<IGuildSettings>,
 	): Promise<IGuildSettings> {
-		const storage = this.getStorage();
-		const usingFallback = this.isUsingFallback();
+		const storage = DatabaseService.getStorage();
+		const usingFallback = DatabaseService.isUsingFallback();
 
 		if (usingFallback && storage) {
 			const current = storage.getGuildSettings(guildId) || { ...defaultGuildSettings, guildId };
@@ -101,12 +101,12 @@ export class DatabaseService {
 	}
 
 	static async resetGuildSettings(guildId: string): Promise<IGuildSettings> {
-		return this.updateGuildSettings(guildId, { ...defaultGuildSettings, guildId });
+		return DatabaseService.updateGuildSettings(guildId, { ...defaultGuildSettings, guildId });
 	}
 
 	static async getAllGuildSettings(): Promise<IGuildSettings[]> {
-		const storage = this.getStorage();
-		const usingFallback = this.isUsingFallback();
+		const storage = DatabaseService.getStorage();
+		const usingFallback = DatabaseService.isUsingFallback();
 
 		if (usingFallback && storage) {
 			return storage.getAllGuildSettings() as IGuildSettings[];

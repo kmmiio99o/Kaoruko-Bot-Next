@@ -1,6 +1,6 @@
 import { Logger } from "@utils/logger";
-import mongoose from "mongoose";
 import * as fs from "fs";
+import mongoose from "mongoose";
 import * as path from "path";
 
 interface FallbackData {

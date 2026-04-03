@@ -34,7 +34,7 @@
 		"rootDirs": [".", "src"],
 		"paths": {
 			"@/*": ["./src/*"],
-			"@manifest": ["./src/manifest"],
+			"@manifest": ["./src/manifest.ts"],
 			"@utils/*": ["./src/utils/*"],
 			"@types/*": ["./src/types/*"],
 			"@handlers/*": ["./src/handlers/*"],

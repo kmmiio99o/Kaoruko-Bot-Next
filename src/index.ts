@@ -11,7 +11,6 @@ import { Logger } from "@utils/logger";
 import { Embeds } from "@utils/embeds";
 import { WebhookLogger } from "@utils/webhooklogger";
 import { Database } from "./config/database";
-import { WebServer } from "@services/WebServer";
 import { TicketInteractionHandler } from "@handlers/ticketInteractionHandler";
 
 const client = new Client({
@@ -27,7 +26,6 @@ const client = new Client({
 
 const commandHandler = new CommandHandler();
 const eventHandler = new EventHandler();
-const webServer = new WebServer(client, commandHandler, config.webPort);
 const ticketHandler = new TicketInteractionHandler();
 
 // Status system variables
@@ -65,9 +63,6 @@ client.once("clientReady", async () => {
   Logger.success(`Bot is ready! Logged in as ${client.user?.tag}`);
 
   try {
-    // Start web server first (independent of database)
-    await webServer.start();
-
     // Try to connect to database (optional for web server)
     try {
       await Database.connect();
@@ -489,7 +484,6 @@ process.on("SIGINT", async () => {
   }
 
   try {
-    await webServer.stop();
     await Database.disconnect();
     process.exit(0);
   } catch (error) {

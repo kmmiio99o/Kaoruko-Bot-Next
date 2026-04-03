@@ -8,30 +8,30 @@
     "build": "node scripts/build.js",
     "start": "node -r ./dist/config/aliases.js dist/index.js",
     "dev": "node scripts/dev.js",
-    "watch": "npm exec tsc --watch --preserveWatchOutput",
+    "watch": "bun exec tsc --watch --preserveWatchOutput",
     "clean": "rm -rf dist node_modules",
-    "lint": "npm exec @biomejs/biome check .",
-    "lint:fix": "npm exec @biomejs/biome check --apply .",
-    "format": "npm exec @biomejs/biome format --write .",
+    "lint": "bun exec @biomejs/biome check .",
+    "lint:fix": "bun exec @biomejs/biome check --apply .",
+    "format": "bun exec @biomejs/biome format --write .",
     "postinstall": "tsc"
   },
   "dependencies": {
-    "axios": "^1.13.2",
+    "axios": "^1.14.0",
     "cors": "^2.8.6",
-    "discord.js": "^14.25.1",
-    "dotenv": "^17.2.3",
+    "discord.js": "^14.26.0",
+    "dotenv": "^17.4.0",
     "express": "^5.2.1",
-    "mongodb": "^7.0.0",
-    "mongoose": "^9.1.5",
-    "socket.io": "^4.8.3",
-    "module-alias": "^2.2.3"
+    "module-alias": "^2.3.4",
+    "mongodb": "^7.1.1",
+    "mongoose": "^9.3.3",
+    "socket.io": "^4.8.3"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
-    "@types/node": "^25.0.10",
-    "nodemon": "^3.1.11",
-    "typescript": "^5.9.3"
+    "@types/node": "^25.5.2",
+    "nodemon": "^3.1.14",
+    "typescript": "^6.0.2"
   },
   "keywords": [
     "discord",

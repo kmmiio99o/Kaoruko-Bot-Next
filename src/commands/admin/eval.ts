@@ -78,7 +78,6 @@ export const command: ICommand = {
 		const code = interaction.options.getString("code", true);
 
 		try {
-			// @ts-expect-error
 			let evaled = eval(code);
 
 			if (typeof evaled !== "string") {

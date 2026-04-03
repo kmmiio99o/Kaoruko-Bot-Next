@@ -53,8 +53,7 @@ export default {
 				throw new Error("This is a test general error!");
 
 			case "reference":
-				// Test reference errors (undefined variables)
-				// @ts-expect-error - Intentional error for testing
+				// @ts-ignore - Intentional error for testing
 				return someUndefinedVariable.thatDoesNotExist;
 
 			case "timeout": {

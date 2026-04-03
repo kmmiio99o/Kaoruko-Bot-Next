@@ -1,0 +1,36 @@
+# Node/Bun dependencies
+node_modules
+.bun
+
+# Build output
+dist
+build
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Logs
+*.log
+logs
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Env files (keep .env.example for reference)
+.env
+
+# Docker files
+docker-compose.override.yml
+
+# Editor files
+.vscode
+.idea
+*.swp
+*.swo
+*.bak
+*.tmp
+
+# Git
+.git
+.github

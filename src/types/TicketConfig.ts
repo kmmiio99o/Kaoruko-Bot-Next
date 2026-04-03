@@ -348,3 +348,99 @@ export default mongoose.model<ITicketConfig, TicketConfigModel>(
 	"TicketConfig",
 	TicketConfigSchema,
 ) as TicketConfigModel;
+
+export interface TicketConfigData {
+	guildId: string;
+	enabled: boolean;
+	supportRoles: string[];
+	adminRoles: string[];
+	categories: Map<string, any>;
+	panelTitle: string;
+	panelDescription: string;
+	panelColor: string;
+	maxTicketsPerUser: number;
+	dmUserOnClose: boolean;
+	requireReason: boolean;
+	allowUserClose: boolean;
+	mentionSupportOnCreate: boolean;
+	defaultCategory: string;
+	autoResponses: any[];
+	transcript: any;
+	ticketNameFormat: string;
+	channelName: string;
+	ticketPermissions: any;
+	autoCloseInactive: boolean;
+	inactiveHours: number;
+	autoArchive: boolean;
+	collectFeedback: boolean;
+	customFields: any[];
+}
+
+export const defaultTicketConfig: TicketConfigData = {
+	guildId: "",
+	enabled: false,
+	supportRoles: [],
+	adminRoles: [],
+	categories: new Map([
+		[
+			"general",
+			{
+				name: "General Support",
+				description: "General questions and support",
+				emoji: "❓",
+				color: "#5865F2",
+				autoAssignRoles: [],
+				requiredRoles: [],
+			},
+		],
+		[
+			"technical",
+			{
+				name: "Technical Support",
+				description: "Technical issues and bugs",
+				emoji: "🔧",
+				color: "#FF6B35",
+				autoAssignRoles: [],
+				requiredRoles: [],
+			},
+		],
+		[
+			"billing",
+			{
+				name: "Billing Support",
+				description: "Payment and billing questions",
+				emoji: "💰",
+				color: "#4CAF50",
+				autoAssignRoles: [],
+				requiredRoles: [],
+			},
+		],
+	]),
+	panelTitle: "Support Tickets",
+	panelDescription: "Create a ticket to get help from our staff team",
+	panelColor: "#5865F2",
+	maxTicketsPerUser: 5,
+	dmUserOnClose: false,
+	requireReason: true,
+	allowUserClose: true,
+	mentionSupportOnCreate: true,
+	defaultCategory: "general",
+	autoResponses: [],
+	transcript: {
+		enabled: false,
+		includeAttachments: true,
+		format: "html",
+	},
+	ticketNameFormat: "{category}-{username}-{number}",
+	channelName: "ticket-{username}",
+	ticketPermissions: {
+		viewTicket: [],
+		manageTickets: [],
+		closeAnyTicket: [],
+	},
+	autoCloseInactive: false,
+	inactiveHours: 24,
+	autoArchive: false,
+	collectFeedback: false,
+	customFields: [],
+};

@@ -41,15 +41,25 @@ async function build() {
 				"cors",
 				"dotenv",
 			],
-			sourcemap: false,
+        sourcemap: true,
 			minify: true,
 			logLevel: "warning",
 		});
 
 		const outputSize = fs.statSync("./dist/index.js").size;
-		console.log(
-			`Bundling completed. Output: dist/index.js (${outputSize} bytes)`,
-		);
+        console.log(
+            `Bundling completed. Output: dist/index.js (${outputSize} bytes)`,
+        );
+        try {
+            const mapPath = "./dist/index.js.map";
+            if (fs.existsSync(mapPath)) {
+                console.log("Wrote dist/index.js.map");
+            } else {
+                console.debug("dist/index.js.map not found after bundle");
+            }
+        } catch (e) {
+            // ignore
+        }
 	} catch (error) {
 		console.error(`Build failed: ${error.message}`);
 		process.exit(1);

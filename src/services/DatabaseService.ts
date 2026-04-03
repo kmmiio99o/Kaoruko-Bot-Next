@@ -1,14 +1,61 @@
 import { Logger } from "@utils/logger";
-import GuildSettings, { type IGuildSettings } from "@/types/GuildSettings";
+import { Database } from "@/config/database";
+import type { IGuildSettings } from "@/types/GuildSettings";
+import GuildSettings from "@/types/GuildSettings";
+
+const defaultGuildSettings: Partial<IGuildSettings> = {
+	guildId: "",
+	prefix: ".",
+	logCommands: true,
+	logErrors: true,
+	logEvents: true,
+	welcomeChannel: null,
+	goodbyeChannel: null,
+	modLogChannel: null,
+	autoModeration: {
+		enabled: false,
+		deleteInvites: false,
+		deleteSpam: false,
+		maxWarnings: 3,
+		spamThreshold: 5,
+		profanityFilter: false,
+	},
+	permissions: {
+		adminRoles: [],
+		modRoles: [],
+		blacklistedUsers: [],
+		allowedChannels: [],
+		blockedChannels: [],
+	},
+};
 
 export class DatabaseService {
-	// Get guild settings with default values
+	private static getStorage() {
+		return Database.getStorage();
+	}
+
+	private static isUsingFallback(): boolean {
+		return Database.isUsingFallback();
+	}
+
 	static async getGuildSettings(guildId: string): Promise<IGuildSettings> {
+		const storage = this.getStorage();
+		const usingFallback = this.isUsingFallback();
+
+		if (usingFallback && storage) {
+			let settings = storage.getGuildSettings(guildId);
+			if (!settings) {
+				settings = { ...defaultGuildSettings, guildId };
+				storage.setGuildSettings(guildId, settings);
+				Logger.info(`Created new guild settings for ${guildId} (JSON)`);
+			}
+			return settings as IGuildSettings;
+		}
+
 		try {
 			let settings = await GuildSettings.findOne({ guildId });
 
 			if (!settings) {
-				// Create default settings
 				settings = new GuildSettings({
 					guildId,
 				});
@@ -23,11 +70,21 @@ export class DatabaseService {
 		}
 	}
 
-	// Update guild settings
 	static async updateGuildSettings(
 		guildId: string,
-		updates: any,
+		updates: Partial<IGuildSettings>,
 	): Promise<IGuildSettings> {
+		const storage = this.getStorage();
+		const usingFallback = this.isUsingFallback();
+
+		if (usingFallback && storage) {
+			const current = storage.getGuildSettings(guildId) || { ...defaultGuildSettings, guildId };
+			const updated = { ...current, ...updates };
+			storage.setGuildSettings(guildId, updated);
+			Logger.info(`Updated guild settings for ${guildId} (JSON)`);
+			return updated as IGuildSettings;
+		}
+
 		try {
 			const settings = await GuildSettings.findOneAndUpdate(
 				{ guildId },
@@ -43,29 +100,18 @@ export class DatabaseService {
 		}
 	}
 
-	// Reset guild settings to defaults
 	static async resetGuildSettings(guildId: string): Promise<IGuildSettings> {
-		try {
-			const settings = await GuildSettings.findOneAndUpdate(
-				{ guildId },
-				{
-					$set: {
-						guildId,
-					},
-				},
-				{ new: true, upsert: true },
-			);
-
-			Logger.info(`Reset guild settings for ${guildId}`);
-			return settings!;
-		} catch (error) {
-			Logger.error(`Error resetting guild settings for ${guildId}: ${error}`);
-			throw error;
-		}
+		return this.updateGuildSettings(guildId, { ...defaultGuildSettings, guildId });
 	}
 
-	// Get all guild settings (for dashboard)
 	static async getAllGuildSettings(): Promise<IGuildSettings[]> {
+		const storage = this.getStorage();
+		const usingFallback = this.isUsingFallback();
+
+		if (usingFallback && storage) {
+			return storage.getAllGuildSettings() as IGuildSettings[];
+		}
+
 		try {
 			const settings = await GuildSettings.find({});
 			return settings;

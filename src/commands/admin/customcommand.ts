@@ -3,7 +3,7 @@ import { Embeds } from "@utils/embeds";
 import { SandboxExecutor } from "@utils/sandboxExecutor";
 import { type ChatInputCommandInteraction, type Message, PermissionsBitField, SlashCommandBuilder } from "discord.js";
 import https from "https";
-import type { CustomCommandType, EventType, TriggerType } from "@/models/CustomCommand";
+import type { EventType, } from "@/models/CustomCommand";
 import type { ICommand } from "@/types/Command";
 
 function fetchAttachment(url: string): Promise<string> {

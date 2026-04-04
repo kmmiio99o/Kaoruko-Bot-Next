@@ -1,7 +1,6 @@
 import { CustomCommandService } from "@services/CustomCommandService";
 import { Logger } from "@utils/logger";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, type Client, EmbedBuilder, type TextChannel } from "discord.js";
-import { config } from "@/config/config";
 import type { ICustomCommand } from "@/models/CustomCommand";
 
 export class CustomCommandApproval {

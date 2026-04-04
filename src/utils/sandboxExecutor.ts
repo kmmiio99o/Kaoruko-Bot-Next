@@ -2,7 +2,6 @@ import { Logger } from "@utils/logger";
 import fs from "fs";
 import os from "os";
 import path from "path";
-import vm from "vm";
 import { Worker } from "worker_threads";
 
 export interface SandboxContext {

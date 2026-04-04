@@ -11,7 +11,7 @@
 		"watch": "bun exec tsc --watch --preserveWatchOutput",
 		"clean": "rm -rf dist node_modules",
 		"lint": "bunx biome check .",
-		"lint:fix": "bunx biome check --write .",
+		"lint:fix": "bunx biome check --write --unsafe",
 		"lint:ci": "bunx biome ci",
 		"format": "bunx biome format --write .",
 		"postinstall": "tsc"

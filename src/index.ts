@@ -1,4 +1,7 @@
 import { CommandHandler } from "@handlers/commandHandler";
+import { CustomCommandApproval } from "@handlers/customCommandApproval";
+import { CustomCommandEventHandlers } from "@handlers/customCommandEventHandlers";
+import { CustomCommandHandler } from "@handlers/customCommandHandler";
 import { EventHandler } from "@handlers/eventHandler";
 import { TicketInteractionHandler } from "@handlers/ticketInteractionHandler";
 import { Embeds } from "@utils/embeds";
@@ -10,6 +13,7 @@ import {
 	GatewayIntentBits,
 	type PresenceData,
 } from "discord.js";
+import { setApprovalHandler } from "@/commands/admin/customcommand";
 import { config } from "./config/config";
 import { Database } from "./config/database";
 
@@ -27,6 +31,14 @@ const client = new Client({
 const commandHandler = new CommandHandler();
 const eventHandler = new EventHandler();
 const ticketHandler = new TicketInteractionHandler();
+const customCommandHandler = new CustomCommandHandler(client);
+const customCommandEventHandlers = new CustomCommandEventHandlers(client, customCommandHandler);
+const customCommandApproval = new CustomCommandApproval(client);
+
+setApprovalHandler(customCommandApproval);
+
+// Random trigger interval
+let randomTriggerInterval: NodeJS.Timeout | null = null;
 
 // Status system variables
 let startTime: number | null = null;
@@ -90,6 +102,19 @@ client.once("clientReady", async () => {
 
 		await commandHandler.loadCommands(config.clientId, config.token);
 		await eventHandler.loadEvents(client);
+
+		customCommandEventHandlers.startListening();
+		customCommandApproval.startListening();
+
+		randomTriggerInterval = setInterval(async () => {
+			try {
+				for (const guild of client.guilds.cache.values()) {
+					await customCommandHandler.handleRandomTriggers(guild.id);
+				}
+			} catch (error) {
+				Logger.error(`Error in random trigger interval: ${error}`);
+			}
+		}, 60000);
 
 		// Start status rotation
 		updateStatus(client);
@@ -203,6 +228,9 @@ client.on("interactionCreate", async (interaction: any) => {
 
 	// Handle slash commands
 	if (interaction.isChatInputCommand()) {
+		const customHandled = await customCommandHandler.handleInteraction(interaction);
+		if (customHandled) return;
+
 		const commandHandler = (client as any).commandHandler;
 		if (!commandHandler) return;
 
@@ -351,7 +379,12 @@ client.on("interactionCreate", async (interaction: any) => {
 
 client.on("messageCreate", async (message) => {
 	if (message.author.bot) return;
-	if (!message.content.startsWith(config.prefix)) return;
+	if (!message.guild) return;
+
+	const customHandled = await customCommandHandler.handleMessage(message);
+	if (customHandled) return;
+
+	if (!message.content || !message.content.startsWith(config.prefix)) return;
 
 	const args = message.content.slice(config.prefix.length).trim().split(/ +/);
 	const commandName = args.shift()?.toLowerCase();
@@ -481,6 +514,10 @@ process.on("SIGINT", async () => {
 	// Clear the status interval
 	if (statusInterval) {
 		clearInterval(statusInterval);
+	}
+
+	if (randomTriggerInterval) {
+		clearInterval(randomTriggerInterval);
 	}
 
 	try {

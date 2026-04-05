@@ -15,8 +15,8 @@ export default {
 	permissions: [PermissionFlagsBits.BanMembers],
 	slashCommand: true,
 	prefixCommand: true,
-	usage: "/ban <user> [reason] or .ban <user> [reason]",
-	examples: ["/ban @user spamming", ".ban @user spamming"],
+	usage: "/ban <user> [reason] [delete_days] or .ban <user> [7d] [reason]",
+	examples: ["/ban @user spamming", ".ban @user 7d spamming"],
 	data: new SlashCommandBuilder()
 		.setName("ban")
 		.setDescription("Ban a user from the server")
@@ -109,11 +109,18 @@ export default {
 				if (!args || args.length === 0) {
 					await message!.reply({
 						embeds: [
-							Embeds.error("Invalid Usage", "Usage: `.ban <user> [reason]`"),
+							Embeds.error("Invalid Usage", "Usage: `.ban <user> [7d] [reason]`"),
 						],
 					});
 					return;
 				}
+
+				const deleteDaysMatch = args[args.length - 1].match(/^(\d+)d$/);
+				if (deleteDaysMatch) {
+					deleteDays = parseInt(deleteDaysMatch[1], 10);
+					args = args.slice(0, -1);
+				}
+
 				targetId = args[0].replace(/[<@!>]/g, "");
 				reason = args.slice(1).join(" ") || reason;
 			}

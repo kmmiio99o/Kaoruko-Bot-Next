@@ -29,6 +29,14 @@ export default {
 				.setName("reason")
 				.setDescription("Reason for the ban")
 				.setRequired(false),
+		)
+		.addIntegerOption((option) =>
+			option
+				.setName("delete_days")
+				.setDescription("Delete messages from the last X days (0-14)")
+				.setMinValue(0)
+				.setMaxValue(14)
+				.setRequired(false),
 		),
 	async run(
 		interaction: ChatInputCommandInteraction | undefined,
@@ -89,12 +97,14 @@ export default {
 			// Resolve target user id and reason
 			let targetId: string | undefined;
 			let reason = "No reason provided";
+			let deleteDays = 0;
 			const invokerTag = isSlash ? interaction!.user.tag : message!.author.tag;
 
 			if (isSlash) {
 				const user = interaction!.options.getUser("user", true);
 				targetId = user.id;
 				reason = interaction!.options.getString("reason") ?? reason;
+				deleteDays = interaction!.options.getInteger("delete_days") ?? 0;
 			} else {
 				if (!args || args.length === 0) {
 					await message!.reply({
@@ -172,7 +182,10 @@ export default {
 
 			// Perform ban (works with users not present in guild too)
 			try {
-				await guild.members.ban(targetId, { reason });
+				await guild.members.ban(targetId, {
+					reason,
+					deleteMessageSeconds: deleteDays * 24 * 60 * 60,
+				});
 
 				const displayTag = (targetMember && targetMember.user?.tag) || targetId;
 				const success = `**${displayTag}** has been banned.\n**Reason:** ${reason}`;

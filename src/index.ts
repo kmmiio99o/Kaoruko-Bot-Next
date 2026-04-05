@@ -13,9 +13,20 @@ import {
 	GatewayIntentBits,
 	type PresenceData,
 } from "discord.js";
+import express from "express";
 import { setApprovalHandler } from "@/commands/admin/customcommand";
 import { config } from "./config/config";
 import { Database } from "./config/database";
+
+const app = express();
+app.get("/", (req, res) => {
+	res.status(200).json({ status: "ok" });
+});
+
+const PORT = process.env.PORT || 1400;
+app.listen(PORT, () => {
+	Logger.info(`Health check server running on port ${PORT}`);
+});
 
 const client = new Client({
 	intents: [

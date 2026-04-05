@@ -79,7 +79,6 @@ async function build() {
 			},
 			external: [
 				"discord.js",
-				"express",
 				"socket.io",
 				"mongoose",
 				"mongodb",

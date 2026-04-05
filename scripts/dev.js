@@ -43,6 +43,7 @@ async function dev() {
 		sourcemap: true,
 		minify: false,
 		logLevel: "warning",
+		logOverride: { "direct-eval": "silent" },
 	});
 
 	await ctx.watch();

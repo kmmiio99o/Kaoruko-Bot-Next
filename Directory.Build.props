@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <!-- Enable Roslyn code analyzers across the repo -->
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <!-- Do not fail the build on warnings by default -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+</Project>

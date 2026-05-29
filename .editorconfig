@@ -1,0 +1,78 @@
+root = true
+
+[*.cs]
+# Surface all Roslyn analyzers as warnings by default
+dotnet_analyzer_diagnostic.category-Usage.severity = warning
+dotnet_analyzer_diagnostic.category-Design.severity = warning
+dotnet_analyzer_diagnostic.category-Naming.severity = warning
+dotnet_analyzer_diagnostic.category-Performance.severity = warning
+dotnet_analyzer_diagnostic.category-Style.severity = warning
+dotnet_analyzer_diagnostic.category-Globalization.severity = warning
+dotnet_analyzer_diagnostic.category-Reliability.severity = warning
+dotnet_analyzer_diagnostic.category-Maintainability.severity = warning
+dotnet_analyzer_diagnostic.category-Security.severity = warning
+
+# Enable specific style rules - only critical ones as warnings
+dotnet_diagnostic.IDE0032.severity = warning  # Use auto-property
+dotnet_diagnostic.IDE0044.severity = warning  # Make field readonly
+dotnet_diagnostic.IDE0051.severity = warning  # Remove unused private members
+dotnet_diagnostic.IDE0052.severity = warning  # Remove unread private members
+dotnet_diagnostic.IDE0060.severity = warning  # Remove unused parameter
+dotnet_diagnostic.IDE0063.severity = warning  # Use simple using statement
+dotnet_diagnostic.IDE0067.severity = warning  # Use is null check
+dotnet_diagnostic.IDE0068.severity = warning  # Use is not null check
+
+# Enable all style warnings during build
+dotnet_diagnostic.IDE0008.severity = warning  # Use explicit type
+dotnet_diagnostic.IDE0011.severity = warning  # Add braces
+dotnet_diagnostic.IDE0028.severity = warning  # Collection init
+dotnet_diagnostic.IDE0090.severity = warning  # Simplify new
+dotnet_diagnostic.IDE0210.severity = warning  # Top-level statements
+dotnet_diagnostic.IDE0300.severity = warning  # Collection init simplify
+dotnet_diagnostic.IDE0301.severity = warning  # Collection init simplify
+dotnet_diagnostic.IDE0058.severity = silent   # Expression unused (disabled for Discord.NET nullable awareness)
+dotnet_diagnostic.IDE0059.severity = warning  # Unnecessary assignment
+dotnet_diagnostic.IDE0066.severity = warning  # Use switch expression
+dotnet_diagnostic.IDE0070.severity = warning  # Use 'System.HashCode'
+dotnet_diagnostic.IDE0074.severity = warning  # Use compound assignment
+dotnet_diagnostic.IDE0075.severity = warning  # Use pattern matching
+dotnet_diagnostic.IDE0082.severity = warning  # Use 'is null' check
+dotnet_diagnostic.IDE0100.severity = warning  # Remove unnecessary equality
+dotnet_diagnostic.IDE0161.severity = warning  # Convert to file-scoped namespace
+dotnet_diagnostic.IDE0182.severity = warning  # Remove unnecessary suppressions
+dotnet_diagnostic.IDE0200.severity = warning  # Convert to constant interpolation
+dotnet_diagnostic.IDE0220.severity = warning  # Add missing cases
+dotnet_diagnostic.IDE0240.severity = warning  # Remove redundant equality
+dotnet_diagnostic.IDE0241.severity = warning  # Use explicit enum values
+dotnet_diagnostic.IDE1005.severity = warning  # Use conditional delegate call
+dotnet_diagnostic.IDE0057.severity = warning  # Substring can be simplified
+dotnet_diagnostic.IDE0390.severity = warning  # Method can be made synchronous
+dotnet_diagnostic.IDE0002.severity = warning  # Name can be simplified
+dotnet_diagnostic.IDE0005.severity = warning  # Using directive is unnecessary
+dotnet_diagnostic.IDE1005.severity = warning  # Use conditional delegate call
+dotnet_diagnostic.CS1591.severity = warning  # Missing XML comment
+dotnet_diagnostic.IDE0028.severity = warning  # Collection initialization can be simplified
+dotnet_diagnostic.IDE0078.severity = warning  # Use pattern matching
+dotnet_diagnostic.IDE0290.severity = warning  # Use primary constructor
+dotnet_diagnostic.IDE1006.severity = warning  # Use 'var' when not ambiguous
+dotnet_diagnostic.IDE1051.severity = warning  # Use 'ref' modifier
+dotnet_diagnostic.IDE1052.severity = warning  # Use 'ref' modifier
+dotnet_diagnostic.IDE0390.severity = warning  # Use 'async' modifier
+
+# Disable nullable awareness warnings for Discord.NET (not nullable aware)
+dotnet_diagnostic.CS8600.severity = warning   # Converting null literal or possible null value to non-nullable type
+dotnet_diagnostic.CS8602.severity = warning   # Dereference of possibly null reference
+dotnet_diagnostic.CS8603.severity = warning   # Possible null reference return
+dotnet_diagnostic.CS8604.severity = warning   # Possible null reference argument
+dotnet_diagnostic.CS8605.severity = warning   # Unboxing a possibly null value
+dotnet_diagnostic.CS8606.severity = warning   # Possible null reference assignment
+dotnet_diagnostic.CS8607.severity = warning   # A possible null value may not be used for argumentation
+dotnet_diagnostic.CS8608.severity = warning   # Struct without required members
+dotnet_diagnostic.CS8609.severity = warning   # Nullability of reference types in return type doesn't match implicitly implemented member
+dotnet_diagnostic.CS8610.severity = warning   # Nullability of reference types in type of parameter doesn't match implicitly implemented member
+dotnet_diagnostic.CS8611.severity = warning   # Nullability of reference types in type of parameter doesn't match
+dotnet_diagnostic.CS8612.severity = warning   # Nullability of reference types in type of parameter doesn't match
+dotnet_diagnostic.CS8613.severity = warning   # Nullability of reference types in return type doesn't match implicitly implemented member
+dotnet_diagnostic.CS8614.severity = warning   # Nullability of reference types in return type doesn't match
+dotnet_diagnostic.CS8615.severity = warning   # Possible null reference argument to parameter marked with 'NotNull' attribute
+dotnet_diagnostic.CS8616.severity = warning   # Nullability of reference types in return type doesn't match

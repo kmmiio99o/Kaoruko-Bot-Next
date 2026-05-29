@@ -1,354 +1,466 @@
-# 🎭 Kaoruko Bot Next
+<div align="center">
+  <img src="https://cdn.kmmiio99o.dev/kaoruko/logo.png" alt="Kaoruko Bot" width="120" />
+  <br/>
+  <h1>Kaoruko Bot Next</h1>
+</div>
 
-**A modern, feature-rich Discord bot built with TypeScript, Bun, and discord.js**
+> A modular Discord bot built with C# and .NET 10.0 using Discord.Net
 
-Kaoruko Bot Next is a comprehensive Discord bot offering advanced moderation tools, a complete ticket support system, entertainment features, and extensive configuration options. Built with modern technologies and best practices for optimal performance and reliability.
+[![GitHub Repository](https://img.shields.io/badge/GitHub-kmmiio99o%2FKaoruko--Bot--Next-181717?style=for-the-badge&logo=github)](https://github.com/kmmiio99o/Kaoruko-Bot-Next)
+[![.NET Version](https://img.shields.io/badge/.NET-10.0-512BD4?style=for-the-badge&logo=dotnet)](https://dotnet.microsoft.com/)
+[![Discord.Net](https://img.shields.io/badge/Discord.Net-3.19.1-5865F2?style=for-the-badge&logo=discord)](https://discordnet.dev/)
+[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
-## ✨ Key Features
+A comprehensive Discord bot offering moderation tools, ticket support system, entertainment features, and extensive configuration options. Built with modern C# practices and designed to be easily extended with new commands and features.
 
-### 🚀 Modern Technology Stack
-- **Bun Runtime**: Ultra-fast JavaScript runtime with built-in bundler and package manager
-- **TypeScript**: Full type safety and modern JavaScript features
-- **discord.js v14**: Latest Discord API implementation
-- **MongoDB + Mongoose**: Robust database integration with schema validation
-- **Hot Reload**: Development mode with automatic restarts on file changes
+---
 
-### 🎫 Advanced Ticket System
-- **Multi-Category Support**: Customizable ticket categories with different settings
-- **Interactive Panels**: Beautiful embed panels with category buttons
-- **Automated Workflows**: Auto-assignment, claiming, and escalation
-- **Transcript Generation**: Complete conversation history preservation
-- **Permission Management**: Role-based access control
-- **Auto-moderation**: Configurable auto-close and cleanup policies
+## Table of Contents
 
-### ⚙️ Comprehensive Configuration
-- **Web Dashboard**: Built-in dashboard for easy management (coming soon)
-- **Database-driven Settings**: Per-guild configuration with export/import
-- **Command-based Setup**: Complete configuration through Discord commands
-- **Auto-moderation**: Spam detection, invite filtering, profanity filter
-- **Role Management**: Flexible permission system with multiple role types
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Architecture](#architecture)
+- [Command Categories](#command-categories)
+- [Custom Commands & Script Engine](#custom-commands--script-engine)
+- [Memory Monitoring & Health Checks](#memory-monitoring--health-checks)
+- [Development](#development)
+- [Contributing](#contributing)
+- [License](#license)
 
-### 🛠️ Dual Command System
-- **Slash Commands**: Modern Discord interactions with autocomplete
-- **Prefix Commands**: Traditional command support for flexibility
-- **Hybrid Support**: Commands can work with both interaction types
+---
 
-## 📦 Installation & Setup
+## Overview
+
+Kaoruko Bot Next is a self-hosted Discord bot written in C# using the Discord.Net library and .NET 10.0 framework. It connects to Discord via a bot token, loads modular commands, and provides services for tickets, custom commands, polls, and guild management through a lightweight SQLite database.
+
+**Technology Stack**
+
+| Technology | Purpose |
+|------------|---------|
+| C# 13.0 | Language |
+| .NET 10.0 | Framework |
+| Discord.Net 3.19.1 | Discord API |
+| SQLite + EF Core | Database |
+| Serilog | Structured logging |
+| Dependency Injection | Service management |
+
+---
+
+## Key Features
+
+### Core Capabilities
+- Modular command architecture supporting easy extension
+- Dual prefix and slash command support
+- Guild-specific configuration stored in SQLite database
+- Comprehensive logging with Serilog
+
+### Command System
+- Admin commands for bot configuration
+- Moderation tools (ban, kick, timeout, warn)
+- Information commands (user info, server info, avatar)
+- Fun entertainment commands (8ball, polls)
+- Ticket system for support workflows
+- Utility commands for common tasks
+
+### Services
+- **Ticket Service**: Full-featured ticket management with categories and workflows
+- **Poll Service**: Interactive polls with reactions and result tracking
+- **Custom Command Service**: Create and manage custom text commands per server
+- **Guild Settings Service**: Per-server configuration persistence
+- **Logging Service**: Structured logging with console and optional webhooks
+- **Script Engine**: Multi-language custom command execution (C#, TypeScript, Python, JavaScript, Kotlin)
+- **Memory Monitor**: Automatic detection and response to memory leaks
+- **Bot Health Service**: Comprehensive health monitoring and alerts
+
+### Features
+- Auto status updates on configurable intervals
+- Random trigger responses
+- Event-based handlers for guild events
+- Health monitoring and startup validation
+- **Multi-language custom commands** with sandboxed execution
+- **Memory leak detection** with automatic graceful restarts
+- **Role and permission-based command access**
+- **Guild-specific and category-based command filtering**
+
+---
+
+## Quick Start
 
 ### Prerequisites
-- **Bun**: Install from [bun.sh](https://bun.sh)
-- **MongoDB**: Database server (local or cloud)
-- **Discord Bot**: Create at [Discord Developer Portal](https://discord.com/developers/applications)
+- .NET 10.0 SDK or later
+- Discord Bot Token (from [Discord Developer Portal](https://discord.com/developers/applications))
 
-### Quick Start
+### Installation Steps
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/your-repo/kaoruko-bot-next.git
-   cd kaoruko-bot-next
+   git clone https://github.com/kmmiio99o/Kaoruko-Bot-Next.git
+   cd Kaoruko-Bot-Next
    ```
 
-2. **Install Dependencies**
+2. **Restore Dependencies**
    ```bash
-   bun install
+   dotnet restore
    ```
 
-3. **Environment Configuration**
-   Create a `.env` file:
-   ```env
-   DISCORD_TOKEN=your_bot_token_here
-   CLIENT_ID=your_bot_client_id_here
-   OWNER_ID=your_discord_user_id_here
-   MONGODB_URI=mongodb://localhost:27017/kaoruko
-   PREFIX=!
-   WEB_PORT=3000
-   WEBHOOK_URL=your_discord_webhook_url_for_logging
+3. **Configure Your Bot**
+   Copy `appsettings.example.json` to `appsettings.json` and fill in required values:
+   ```json
+   {
+     "Discord": {
+       "Token": "your_bot_token_here",
+       "Prefix": ".",
+       "OwnerId": "your_user_id",
+       "ClientId": "your_client_id"
+     },
+     "Database": {
+       "Path": "kaoruko.db"
+     }
+   }
    ```
 
-4. **Build and Start**
+4. **Build and Run**
    ```bash
-   # Development mode (with hot reload)
-   bun run dev
-
-   # Production mode
-   bun run build
-   bun start
+   dotnet build
+   dotnet run
    ```
 
-## 🎛️ Configuration Guide
+---
 
-### Initial Bot Setup
+## Configuration
 
-1. **Invite the Bot**
-   - Use the Discord Developer Portal to generate an invite link
-   - Required permissions: Administrator (for full functionality)
+Configuration is managed through `appsettings.json` and environment-specific overrides via `appsettings.Development.json`.
 
-2. **Configure Server Settings**
-   ```
-   /config general prefix prefix:!
-   /config general channels welcome:#welcome goodbye:#goodbye modlog:#mod-logs
-   /config general logging commands:true errors:true events:true
-   ```
+### Configuration Options
 
-3. **Setup Ticket System**
-   ```
-   /config tickets quick-setup category:Support Tickets logs:#ticket-logs support-role:@Support Team
-   /ticketpanel channel:#support
-   ```
+| Setting | Description |
+|:--------|:------------|
+| `Discord:Token` | Bot token for Discord authentication **(never commit this)** |
+| `Discord:Prefix` | Command prefix (default: `.`) |
+| `Discord:OwnerId` | Your Discord user ID for owner commands |
+| `Discord:ClientId` | Bot application ID from Developer Portal |
+| `Database:Path` | SQLite database file path (default: `kaoruko.db`) |
 
-### Advanced Configuration
+### Token Loading
 
-#### Auto-Moderation Setup
-```
-/config moderation automod enabled:true delete-invites:true delete-spam:true profanity-filter:true max-warnings:3 spam-threshold:5
-```
+The bot loads configuration from:
+1. `appsettings.json` (default settings)
+2. `appsettings.{ASPNETCORE_ENVIRONMENT}.json` (environment overrides)
+3. Environment variables (highest priority)
 
-#### Role Management
-```
-/config moderation roles type:admin action:add role:@Administrators
-/config moderation roles type:mod action:add role:@Moderators
-```
+---
 
-#### Ticket Categories
-```
-/ticketconfig category action:add name:"Technical Support" description:"For technical issues" emoji:🔧 color:#FF6B35
-/ticketconfig category action:add name:"Billing Support" description:"For payment questions" emoji:💰 color:#4CAF50
-```
+## Architecture
 
-## 📋 Command Categories
+Multi-layered architecture with modular commands, services, data layer, and sandboxed script execution.  
+See [**SCRIPTING_GUIDE.md**](./SCRIPTING_GUIDE.md) for detailed architecture diagrams and design patterns.
 
-### 🔧 Administration (`/config`)
-- **General Settings**: Prefix, channels, logging configuration
-- **Moderation Setup**: Auto-moderation, roles, permissions
-- **Ticket Configuration**: Complete ticket system management
-- **Export/Import**: Backup and restore configurations
-
-### 🎫 Ticket Management
-- **`/ticketpanel`**: Create interactive ticket creation panel
-- **`/ticketconfig`**: Advanced ticket system configuration
-- **`/ticket`**: Individual ticket management commands
-
-### 🛡️ Moderation
-- **`/ban`**: Permanently remove users with reason logging
-- **`/kick`**: Remove users temporarily with moderation logs
-- **`/timeout`**: Restrict user interactions for specified duration
-- **`/warn`**: Issue warnings with automated action thresholds
-
-### ℹ️ Information & Utility
-- **`/help`**: Interactive help system with command search
-- **`/serverinfo`**: Detailed server statistics and information
-- **`/userinfo`**: Comprehensive user profile display
-- **`/avatar`**: High-resolution avatar retrieval
-- **`/ping`**: Bot latency and performance metrics
-
-### 🎪 Entertainment
-- **`/8ball`**: Magic 8-ball responses to questions
-- **`/poll`**: Interactive polls with multiple options
-- **`/endpoll`**: Manually close polls with results
-
-## 🏗️ Project Structure
+### Project Structure
 
 ```
-kaoruko-bot-next/
-├── src/
-│   ├── commands/           # Command implementations
-│   │   ├── admin/          # Administrative commands
-│   │   ├── tickets/        # Ticket system commands
-│   │   ├── info/           # Information commands
-│   │   ├── moderation/     # Moderation tools
-│   │   ├── utility/        # Utility commands
-│   │   └── fun/            # Entertainment commands
-│   ├── handlers/           # Core system handlers
-│   │   ├── commandHandler.ts
-│   │   ├── eventHandler.ts
-│   │   └── ticketInteractionHandler.ts
-│   ├── services/           # Business logic services
-│   │   ├── TicketService.ts
-│   │   ├── DatabaseService.ts
-│   │   └── WebServer.ts
-│   ├── models/             # Database schemas
-│   │   ├── GuildSettings.ts
-│   │   ├── Ticket.ts
-│   │   ├── TicketConfig.ts
-│   │   ├── Poll.ts
-│   │   └── CustomCommand.ts
-│   ├── events/             # Discord event handlers
-│   ├── utils/              # Utility functions
-│   ├── types/              # TypeScript definitions
-│   └── config/             # Configuration files
-├── scripts/                # Build and development scripts
-├── public/                 # Web dashboard assets (future)
-├── package.json           # Bun package configuration
-├── bunfig.toml           # Bun runtime configuration
-├── tsconfig.json         # TypeScript configuration
-└── README.md            # This file
+Kaoruko-Bot-Next/
+├── Core/
+│   ├── Bot.cs                    # Main bot class and initialization
+│   ├── BotStartup.cs             # Startup sequence
+│   ├── BotEvents.cs              # Discord event handlers
+│   ├── BotHealth.cs              # Health monitoring
+│   └── BotTimers.cs              # Timer-based operations
+├── Commands/
+│   ├── Base/                     # Base command classes
+│   ├── Admin/                    # Administration commands
+│   ├── Moderation/               # Moderation commands
+│   ├── Tickets/                  # Ticket system commands
+│   ├── Info/                     # Information commands
+│   ├── Fun/                      # Entertainment commands
+│   ├── Utility/                  # Utility commands
+│   └── CommandRegistry.cs        # Command discovery and registration
+├── Services/
+│   ├── DatabaseService.cs        # Database operations
+│   ├── LoggingService.cs         # Serilog configuration
+│   ├── TicketService.cs          # Ticket management logic
+│   ├── TicketConfigService.cs    # Ticket configuration
+│   ├── PollService.cs            # Poll management
+│   ├── CustomCommandService.cs   # Custom command handling
+│   └── GuildSettingsService.cs   # Guild configuration
+├── Data/
+│   └── AppDbContext.cs           # EF Core database context
+├── Models/                       # Data models and DTOs
+├── Extensions/                   # Extension methods
+├── Components/                   # Reusable UI components
+├── Interactions/                 # Discord interactions
+├── Attributes/                   # Custom attributes
+├── Resources/                    # Static resources
+├── Builders/                     # Object builders
+├── Program.cs                    # Entry point
+├── KaorukoBot.csproj            # Project file
+└── appsettings.json             # Configuration
 ```
 
-## 🎨 Ticket System Features
+### Core Components
 
-### 🎯 Categories & Customization
-- **Multiple Categories**: General, Technical, Billing, Reports, etc.
-- **Custom Styling**: Unique colors, emojis, and descriptions
-- **Role Requirements**: Restrict categories to specific roles
-- **Auto-assignment**: Automatically assign tickets to team members
+| Component | Responsibility |
+|:----------|:---------------|
+| `Bot.cs` | Central orchestrator, client lifecycle, event wiring |
+| `CommandRegistry.cs` | Discovers and dispatches commands |
+| `DatabaseService.cs` | SQLite operations via EF Core |
+| `TicketService.cs` | Ticket creation, management, and workflows |
+| `PollService.cs` | Poll creation and reaction handling |
+| `LoggingService.cs` | Structured logging with Serilog |
+| `GuildSettingsService.cs` | Per-guild configuration persistence |
 
-### 🔧 Management Features
-- **Claiming System**: Staff can claim tickets for ownership
-- **User Management**: Add/remove users from ticket conversations
-- **Priority Levels**: Low, Normal, High, Urgent priority classification
-- **Status Tracking**: Open, In Progress, Waiting, Closed, Archived
+### Startup Flow
 
-### 📊 Analytics & Logging
-- **Comprehensive Logs**: All ticket actions logged with timestamps
-- **Transcript Generation**: Complete conversation history preservation
-- **Performance Metrics**: Response times, resolution rates, user satisfaction
-- **Export Capabilities**: Data export for external analysis
-
-### ⚡ Automation Features
-- **Auto-close**: Inactive ticket automatic closure
-- **Escalation Rules**: Automatic escalation based on time or priority
-- **Feedback Collection**: Post-closure satisfaction surveys
-- **Smart Notifications**: Context-aware staff notifications
-
-## 🔒 Permission System
-
-### Role Hierarchy
-- **Owner**: Full system access and dangerous commands
-- **Administrator**: Complete bot configuration and management
-- **Moderator**: Moderation commands and ticket management
-- **Support**: Ticket system access and basic moderation
-- **User**: Standard command access
-
-### Granular Permissions
-- **Command-level**: Individual command access control
-- **Channel-level**: Restrict bot usage to specific channels
-- **Feature-level**: Enable/disable entire feature sets
-- **User-level**: Blacklist or whitelist specific users
-
-## 🚀 Development
-
-### Development Mode
-```bash
-bun run dev
 ```
-Features hot reload, enhanced logging, and development utilities.
-
-### Building for Production
-```bash
-bun run build
-```
-Creates optimized JavaScript build in `dist/` directory.
-
-### Testing
-```bash
-bun test
-```
-Runs the test suite with Bun's built-in test runner.
-
-### Code Quality
-```bash
-bun run lint        # Check code style
-bun run lint:fix    # Auto-fix issues
-bun run format      # Format code with Biome
+Program.cs
+├── Load Configuration (appsettings.json + environment)
+├── Setup Database (EnsureCreated)
+├── Configure Logging (Serilog)
+├── Build Dependency Injection Container
+└── Initialize Bot
+    ├── Create Discord Client
+    ├── Register Command Handlers
+    ├── Setup Event Listeners
+    ├── Initialize Services
+    └── Connect to Discord Gateway
 ```
 
-## 📚 API Reference
+---
 
-### Environment Variables
+## Command Categories
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `DISCORD_TOKEN` | ✅ | - | Discord bot token |
-| `CLIENT_ID` | ✅ | - | Discord application ID |
-| `OWNER_ID` | ✅ | - | Bot owner Discord user ID |
-| `MONGODB_URI` | ✅ | - | MongoDB connection string |
-| `PREFIX` | ❌ | `.` | Default command prefix |
-| `WEB_PORT` | ❌ | `3000` | Web dashboard port |
-| `WEBHOOK_URL` | ❌ | - | Discord webhook for error logging |
-| `NODE_ENV` | ❌ | `development` | Environment mode |
+### Admin Commands
+Manage bot configuration and settings for your server.
+- Bot configuration and prefix management
+- Settings backup and restore
 
-### Configuration Export Format
+### Moderation Commands
+Tools for community management and user enforcement.
+- `/ban` - Permanently remove users
+- `/kick` - Remove users from server
+- `/timeout` - Restrict user interactions
+- `/warn` - Issue warnings to users
+
+### Ticket Commands
+Create and manage support tickets.
+- `/ticket create` - Open a new support ticket
+- `/ticket claim` - Assign ticket to yourself
+- `/ticket close` - Resolve and close a ticket
+- Ticket category management
+
+### Information Commands
+Retrieve useful information about users and servers.
+- `/userinfo` - Display user profile information
+- `/serverinfo` - Show server statistics
+- `/avatar` - Get high-resolution user avatar
+- `/ping` - Check bot latency
+
+### Fun Commands
+Entertainment and interactive features.
+- `/8ball` - Magic 8-ball responses
+- `/poll` - Create interactive polls
+- `/customcommand` - Create custom text commands
+
+### Utility Commands
+General purpose utility tools.
+- Configuration queries
+- Status checks
+- Help and documentation
+
+---
+
+## Custom Commands & Script Engine
+
+Create custom commands using multiple programming languages. Scripts run in sandboxed environments with built-in timeout, memory limits, and permission controls.
+
+### Supported Languages
+
+| Language | Engine | Best For | Setup |
+|----------|--------|----------|-------|
+| JavaScript | Jint (embedded) | Quick scripts, no deps | Built-in |
+| C# | Roslyn (embedded) | Complex logic, type safety | Built-in |
+| TypeScript | ts-node subprocess | Type-safe scripts | Node.js required |
+| Python | python3 subprocess | Data processing, math | Python 3.x required |
+| Kotlin | kotlin subprocess | Modern syntax, functional | JVM required |
+
+### Quick Examples
+
+```javascript
+// JavaScript — globals injected directly
+respond("Hello " + user.name + "!");
+if (args.length > 0) respond("You said: " + args[0]);
+```
+
+```csharp
+// C# — strongly-typed globals
+respond($"Hello {user.Name}!");
+var sum = args.Select(int.Parse).Sum();
+respond($"Sum: {sum}");
+```
+
+### How It Works
+
+Each script receives the same set of global variables:
+
+| Variable | Description |
+|---|---|
+| `user` | Executor info (id, name, discriminator, avatarUrl) |
+| `guild` | Server info (id, name, memberCount) |
+| `channel` | Channel info (id, name, topic) |
+| `member` | Member info (nickname, joinedAt, roles) |
+| `message` | Raw message text |
+| `args` | Parsed arguments array |
+| `respond(text)` | Send a response to the channel |
+
+### Features
+
+- **Sandboxed**: Timeout (5s default), output limit (4KB), recursion guard
+- **Cached**: C# scripts compiled and cached by hash (100MB cap)
+- **Controlled**: Role/user whitelists, channel restrictions, permission checks
+- **Extensible**: Module addon system for composing functionality
+
+### Full Documentation
+
+See [**CUSTOM_COMMANDS_GUIDE.md**](./CUSTOM_COMMANDS_GUIDE.md) for setup, permissions, and management.  
+See [**SCRIPTING_GUIDE.md**](./SCRIPTING_GUIDE.md) for architecture details and language tutorials.
+
+---
+
+## Memory Monitoring & Health Checks
+
+The bot includes sophisticated memory monitoring to detect and respond to memory leaks automatically.
+
+### Features
+
+- **Real-time Memory Tracking**: Monitors memory usage every 5 seconds
+- **Growth Pattern Detection**: Identifies memory leak patterns
+- **Threshold Alerts**: 
+  - Warning: 500MB (logs warning)
+  - Critical: 800MB (logs critical alert)
+- **Automatic Graceful Restart**: Initiates safe restart if critical threshold reached
+- **Event System**: Integrates with monitoring/alerting systems
+- **Low Overhead**: Health checks take only 1-2ms per cycle
+
+### Configuration
+
+Add to `appsettings.json`:
+
 ```json
 {
-  "guildSettings": {
-    "prefix": "!",
-    "logCommands": true,
-    "autoModeration": {
-      "enabled": true,
-      "deleteInvites": true,
-      "spamThreshold": 5
-    }
-  },
-  "ticketConfig": {
-    "enabled": true,
-    "maxTicketsPerUser": 3,
-    "categories": {
-      "general": {
-        "name": "General Support",
-        "emoji": "❓",
-        "color": "#5865F2"
-      }
-    }
+  "HealthMonitoring": {
+    "CheckIntervalSeconds": 5,
+    "MemoryWarningThresholdMb": 500,
+    "MemoryCriticalThresholdMb": 800,
+    "HistorySize": 100
   }
 }
 ```
 
-## 🤝 Contributing
+### How It Works
 
-### Development Guidelines
-1. **Code Style**: Follow TypeScript best practices
-2. **Commit Messages**: Use conventional commit format
-3. **Testing**: Include tests for new features
-4. **Documentation**: Update README and code comments
+```
+BotHealthService
+├── MemoryMonitor (runs every 5 seconds)
+│   ├── Takes memory snapshot
+│   ├── Maintains history (last 100 snapshots)
+│   ├── Calculates growth trends
+│   └── Triggers alerts if thresholds exceeded
+└── Event System
+    ├── OnMemoryWarning (logs warning)
+    ├── OnMemoryCritical (logs alert + prepares restart)
+    └── OnHealthCheck (status report)
+```
+
+### Usage in Code
+
+```csharp
+// Inject health service
+public MyService(BotHealthService healthService)
+{
+    _healthService = healthService;
+}
+
+// Get current health status
+var status = await _healthService.GetHealthStatusAsync();
+Console.WriteLine($"Memory: {status.MemoryUsageMb}MB");
+
+// Subscribe to alerts
+_healthService.OnMemoryWarning += (usage) => 
+    Console.WriteLine($"Warning: {usage}MB");
+
+_healthService.OnMemoryCritical += (usage) => 
+    Console.WriteLine($"Critical: {usage}MB - Restarting...");
+```
+
+## Development
+
+### Building the Project
+```bash
+dotnet build
+```
+
+### Running in Development
+```bash
+dotnet run
+```
+
+The bot reads from `appsettings.Development.json` when `ASPNETCORE_ENVIRONMENT=Development`.
+
+### Adding a New Command
+
+1. Create a new class in the appropriate `Commands/` subfolder
+2. Inherit from the base command class
+3. Implement required methods for command handling
+4. The `CommandRegistry` will auto-discover and register it
+
+### Adding a New Service
+
+1. Create a service class in the `Services/` folder
+2. Register it in the dependency injection container in `Program.cs`
+3. Inject it where needed via constructor dependency injection
+
+### Database Migrations
+
+The database is initialized automatically on startup via EF Core:
+```csharp
+initContext.Database.EnsureCreated();
+```
+
+To modify the schema, update the `AppDbContext` class and the database will be updated on next startup.
+
+---
+
+## Contributing
+
+### Guidelines
+- Follow C# naming conventions and code style
+- Use dependency injection for service dependencies
+- Write descriptive commit messages
+- Update documentation when adding features
+- Test commands in a development server before submitting PR
 
 ### Pull Request Process
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes with tests
-4. Run quality checks (`bun run lint && bun test`)
-5. Commit changes (`git commit -m 'feat: add amazing feature'`)
-6. Push to branch (`git push origin feature/amazing-feature`)
-7. Open a Pull Request
+2. Create a feature branch (`git checkout -b feature/description`)
+3. Make changes and test thoroughly
+4. Commit with clear messages (`git commit -m "feat: description"`)
+5. Push to your branch
+6. Open a Pull Request describing the changes
 
-## 🐛 Troubleshooting
+### Security
+- Never commit bot tokens or sensitive credentials
+- Use `.gitignore` to exclude `appsettings.json` and database files
+- Always use environment variables for production secrets
 
-### Common Issues
+---
 
-**Bot not responding to commands**
-- Verify the bot token in `.env`
-- Check bot permissions in Discord server
-- Ensure MongoDB connection is working
-
-**Ticket system not working**
-- Run `/config tickets status` to check configuration
-- Verify category channel exists and bot has permissions
-- Check support role assignments
-
-**Build failures**
-- Ensure Bun is installed and up to date
-- Clear cache: `rm -rf node_modules bun.lockb && bun install`
-- Check TypeScript configuration
-
-### Debug Mode
-Set `NODE_ENV=development` for enhanced logging and debugging information.
-
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- **Discord.js Team**: Excellent Discord API library
-- **Bun Team**: Revolutionary JavaScript runtime
-- **MongoDB Team**: Robust database solutions
-- **TypeScript Team**: Enhanced JavaScript development
-- **Open Source Community**: Inspiration and contributions
 
 ---
 
 **Need Help?**
-- 📖 [Documentation](coming soon)
-- 💬 [Discord Support Server](https://discord.gg/cYZPfXcBGB)
-- 🐛 [Issue Tracker](https://github.com/kmmiio99o/Kaoruko-Bot-Next/issues/new)
-
-> **⚠️ Note**: This bot requires proper Discord permissions to function correctly. Always test in a development server before production deployment.
+- Discord Support Server: [https://discord.gg/cYZPfXcBGB](https://discord.gg/cYZPfXcBGB)
+- Issue Tracker: [GitHub Issues](https://github.com/kmmiio99o/Kaoruko-Bot-Next/issues)

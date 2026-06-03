@@ -1,4 +1,4 @@
-name: Test build
+name: Build
 
 on:
   push:
@@ -13,16 +13,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v5
         with:
-          bun-version: latest
+          dotnet-version: 10.0.x
 
-      - name: Install dependencies
-        run: bun install
+      - name: Restore dependencies
+        run: dotnet restore
 
-      - name: Run lint (ci)
-        run: bun run lint:ci
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
 
-      - name: Run build
-        run: bun run build
+      - name: Run tests
+        run: dotnet test --no-build --configuration Release
+        continue-on-error: false
